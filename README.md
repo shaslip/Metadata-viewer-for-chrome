@@ -1,5 +1,5 @@
 ```
-rag-librarian-extension/
+metadata-viewer-for-chrome/
 ├── public/
 │   ├── manifest.json              # V3 Manifest (Permissions: sidePanel, activeTab, scripting)
 │   ├── icons/
