@@ -1,44 +1,46 @@
 ```
 metadata-viewer-for-chrome/
 ├── public/
-│   ├── manifest.json              # V3 Manifest (Permissions: sidePanel, activeTab, scripting)
-│   ├── icons/
-│   │   ├── icon-16.png
-│   │   ├── icon-48.png
-│   │   └── icon-128.png
-│   └── side_panel.html            # Entry HTML for the Contribution UI
+│   ├── manifest.json              # Permissions: cookies, storage, host_permissions: [*://*.bahai.works/*, *://admin.bahaidata.org/*]
+│   ├── side_panel.html            # Entry point
+│   └── icons/
 │
 ├── src/
 │   ├── background/
-│   │   └── service_worker.ts      # API Proxy: Handles fetch reqs to your RAG API (CORS handling)
+│   │   ├── service_worker.ts      # Main Event Loop
+│   │   └── auth_manager.ts        # Handshake Logic: Reads Wiki Cookie -> POSTs to API -> Saves JWT
 │   │
 │   ├── content/
-│   │   ├── index.ts               # Main content script entry point
-│   │   ├── scraper.ts             # Extracts wgArticleId, source code (bw/bp), and Revision ID
-│   │   ├── highlighter.ts         # Logic to find text matches & wrap in <span class="rag-highlight">
-│   │   ├── overlay_manager.ts     # Manages tooltips when hovering over RAG highlights
-│   │   └── selection_listener.ts  # Detects user text selection -> Sends message to open Side Panel
+│   │   ├── index.ts               # Entry: Injects CSS & Listeners
+│   │   ├── scraper.ts             # Grabs page_id, rev_id, and checks for "Restricted" access text
+│   │   ├── highlighter.ts         # Renders saved units (Green) & OCR noise (Red) on page load
+│   │   ├── selection_handler.ts   # Captures user selection & opens Side Panel
+│   │   └── dom_events.ts          # Listens for API "Paint" messages to update the view
 │   │
-│   ├── side_panel/                # The "Write" UI (React/Vue App)
-│   │   ├── index.tsx              # React entry point
-│   │   ├── App.tsx                # Main Side Panel View
+│   ├── side_panel/
+│   │   ├── index.tsx              # React Entry
+│   │   ├── App.tsx                # Routing: Show Login vs. Editor vs. Viewer
+│   │   ├── context/
+│   │   │   └── UnitContext.tsx    # State: Holds the "Pinned" Unit ID (Active Subject) for cross-page linking
 │   │   ├── components/
-│   │   │   ├── UnitForm.tsx       # Form: Text content, Unit Type (Tablet/Prayer), Author
-│   │   │   ├── TagSelector.tsx    # Multi-select component for 'defined_tags'
-│   │   │   └── RelationBuilder.tsx # UI to link current selection to another Unit ID
+│   │   │   ├── AuthGate.tsx       # "Connect with MediaWiki" button
+│   │   │   ├── UnitForm.tsx       # Inputs: Type, Author, Tags (Auto-filled with selection text)
+│   │   │   ├── RelationshipManager.tsx # The "Linker": Shows Active Subject -> Connect to Current Selection
+│   │   │   └── TagInput.tsx       # Async Select for 'defined_tags' taxonomy
 │   │   └── hooks/
-│   │       └── useRagApi.ts       # React hook for submitting data to your backend
+│   │       └── useApi.ts          # Wrapper for fetch() that attaches the JWT automatically
 │   │
 │   ├── utils/
-│   │   ├── api_types.ts           # TypeScript interfaces mirroring your SQL Schema (LogicalUnit, Tag)
-│   │   ├── fuzzy_search.ts        # Critical: Matches DB text to DOM text despite minor whitespace diffs
-│   │   └── storage.ts             # Wrapper for chrome.storage.local (Cache RAG data per page)
+│   │   ├── api_client.ts          # Typed fetcher for your Express API (GET /units, POST /relationships)
+│   │   ├── offset_calculator.ts   # CRITICAL: Maps DOM Range <-> Database Integer Indices (start_char, end_char)
+│   │   ├── types.ts               # Interfaces: LogicalUnit, Relation, UserRole
+│   │   └── logger.ts              # Dev logging
 │   │
 │   └── styles/
-│       ├── overlay.css            # Styles for the highlights (.rag-highlight) and tooltips
-│       └── side_panel.css         # Styles for the sidebar form
+│       ├── highlights.css         # .rag-unit-highlight (Green), .ocr-noise (Red underline)
+│       └── side_panel.css         # Tailwind or CSS modules
 │
-├── package.json                   # Deps: React, TypeScript, Vite, etc.
-├── vite.config.ts                 # Build config to output separate bundles for content/background/panel
+├── package.json
+├── vite.config.ts                 # Multi-entry build config
 └── tsconfig.json
 ```
