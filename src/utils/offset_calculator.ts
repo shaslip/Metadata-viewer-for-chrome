@@ -4,7 +4,7 @@
  */
 export const calculateOffsets = (range: Range, containerSelector: string = '#mw-content-text') => {
     const container = document.querySelector(containerSelector);
-    if (!container) return null;
+    if (!container) return { start: 0, end: 0 }; // Fallback
 
     // 1. Create a Range that spans from the start of the article to the start of the selection
     const preSelectionRange = document.createRange();
@@ -18,22 +18,15 @@ export const calculateOffsets = (range: Range, containerSelector: string = '#mw-
     const length = range.toString().length;
 
     return {
-        start_char_index: start,
-        end_char_index: start + length
+        start,
+        end: start + length
     };
 };
 
 /**
  * REVERSE OPERATION:
  * Finds a text node in the DOM based on a DB character index.
- * Used for the "Highlighter" (Read Path).
  */
-export const findRangeFromOffsets = (start: number, end: number, containerSelector: string = '#mw-content-text') => {
-    // This is complex - it requires a TreeWalker to count characters
-    // I can provide this implementation if you are ready for the "Read" path logic.
-    return null; 
-};
-
 export const findRangeFromOffsets = (start: number, end: number, containerSelector: string = '#mw-content-text'): Range | null => {
     const container = document.querySelector(containerSelector);
     if (!container) return null;
