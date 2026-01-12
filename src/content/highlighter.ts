@@ -2,27 +2,7 @@ import { getPageMetadata } from './scraper';
 import { findRangeFromOffsets } from '@/utils/offset_calculator';
 import { LogicalUnit } from '@/utils/types';
 
-// 1. HARDCODED STYLES (Bypasses loading issues with external CSS files)
-const STYLES = `
-.rag-highlight {
-  background-color: rgba(255, 230, 0, 0.5);
-  border-bottom: 2px solid rgba(218, 165, 32, 0.8);
-  cursor: pointer;
-  mix-blend-mode: multiply; 
-}
-.rag-highlight:hover {
-  background-color: rgba(255, 215, 0, 0.7);
-}
-.unit-type-prayer { background-color: rgba(144, 238, 144, 0.5); border-bottom-color: green; }
-.unit-type-history { background-color: rgba(173, 216, 230, 0.5); border-bottom-color: blue; }
-.unit-type-question { background-color: rgba(255, 182, 193, 0.5); border-bottom-color: red; }
-`;
-
 export const initHighlighter = async () => {
-    // Inject CSS immediately
-    const styleEl = document.createElement('style');
-    styleEl.textContent = STYLES;
-    document.head.appendChild(styleEl);
 
     const meta = getPageMetadata();
     
@@ -47,9 +27,7 @@ const highlightUnit = (unit: LogicalUnit) => {
             console.warn(`Could not map unit ${unit.id} to DOM.`);
             return;
         }
-
         safeHighlightRange(range, unit);
-
     } catch (e) {
         console.error("Highlight error for unit", unit.id, e);
     }
@@ -59,7 +37,7 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
     const commonAncestor = range.commonAncestorContainer;
     const nodesToWrap: { node: Node, start: number, end: number }[] = [];
 
-    // --- FIX: Handle Single Node Selection ---
+    // CASE 1: Single Node
     if (commonAncestor.nodeType === Node.TEXT_NODE) {
         nodesToWrap.push({
             node: commonAncestor,
@@ -67,7 +45,7 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
             end: range.endOffset
         });
     } 
-    // --- FIX: Handle Multi-Node Selection ---
+    // CASE 2: Multi Node
     else {
         const walker = document.createTreeWalker(
             commonAncestor,
@@ -95,8 +73,6 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
             currentNode = walker.nextNode();
         }
     }
-
-    console.log(`[Highlighter] Unit ${unit.id}: Wrapping ${nodesToWrap.length} text nodes.`);
 
     nodesToWrap.forEach(({ node, start, end }) => {
         const wrapper = document.createElement('span');
