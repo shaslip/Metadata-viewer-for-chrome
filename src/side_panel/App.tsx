@@ -21,22 +21,6 @@ export default function App() {
     });
   }, []);
 
-  // CHECK FOR PENDING UNIT ON LOAD ---
-  useEffect(() => {
-    const checkPending = async () => {
-        const result = await chrome.storage.local.get(['pending_unit']);
-        if (result.pending_unit) {
-            setViewUnit(result.pending_unit);
-            // Clear it so it doesn't persist forever
-            await chrome.storage.local.remove('pending_unit');
-        }
-    };
-    
-    if (isAuthenticated) {
-        checkPending();
-    }
-  }, [isAuthenticated]);
-
   useEffect(() => {
     const handleMessage = (request: any) => {
       // CASE 1: USER HIGHLIGHTS NEW TEXT (Create Mode)
