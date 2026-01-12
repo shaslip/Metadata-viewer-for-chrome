@@ -1,13 +1,15 @@
 /* Base Highlight */
 .rag-highlight {
-  background-color: rgba(255, 255, 0, 0.2); /* Subtle Yellow */
-  border-bottom: 2px solid rgba(218, 165, 32, 0.5);
+  background-color: rgba(255, 230, 0, 0.5); 
+  border-bottom: 2px solid rgba(218, 165, 32, 0.8);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  mix-blend-mode: multiply;
 }
 
 .rag-highlight:hover {
-  background-color: rgba(255, 255, 0, 0.5);
+  background-color: rgba(255, 215, 0, 0.7);
+  box-shadow: 0 0 3px rgba(0,0,0,0.3);
 }
 
 /* Color Coding by Unit Type */
@@ -26,8 +28,14 @@
   border-bottom-color: red;
 }
 
+.unit-type-default {
+  background-color: rgba(220, 220, 220, 0.5);
+  border-bottom-color: grey;
+}
+
 /* Active Selection (When clicking a highlight) */
 .rag-highlight.active {
-  background-color: rgba(255, 215, 0, 0.6);
-  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  background-color: rgba(255, 215, 0, 0.9);
+  outline: 2px solid orange;
+  z-index: 10;
 }
