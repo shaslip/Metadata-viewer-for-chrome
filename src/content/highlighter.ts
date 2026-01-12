@@ -79,6 +79,8 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
         currentNode = walker.nextNode();
     }
 
+    console.log(`[Highlighter] Unit ${unit.id}: Wrapping ${nodesToWrap.length} text nodes.`);
+
     // Apply Wrappers
     nodesToWrap.forEach(({ node, start, end }) => {
         const wrapper = document.createElement('span');
