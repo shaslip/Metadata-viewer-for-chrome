@@ -7,23 +7,29 @@ interface Props {
 export const AuthGate: React.FC<Props> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // New State for Credentials
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleConnect = async () => {
+  const handleConnect = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
-    console.log("[AuthGate] Connect button clicked. Sending message...");
 
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'PERFORM_HANDSHAKE' });
-      console.log("[AuthGate] Response received:", response);
+      // Send credentials to Background Script
+      const response = await chrome.runtime.sendMessage({ 
+        type: 'PERFORM_HANDSHAKE',
+        credentials: { username, password }
+      });
 
       if (response && response.success) {
         onLogin();
       } else {
-        setError(response.error || "Connection failed, are you logged in?");
+        setError(response.error || "Login failed.");
       }
     } catch (err) {
-      console.error("[AuthGate] Message passing failed:", err);
       setError("Extension error: Could not reach background service.");
     } finally {
       setLoading(false);
@@ -33,14 +39,10 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
   return (
     <div className="flex flex-col items-center justify-center h-screen p-6 bg-slate-50 text-center">
       <div className="mb-6">
-        {/* Placeholder Icon */}
         <div className="w-16 h-16 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-2xl font-bold">
           B
         </div>
         <h2 className="mt-4 text-xl font-bold text-slate-800">RAG Librarian</h2>
-        <p className="text-sm text-slate-500 mt-2">
-          Connect your account to curate the Knowledge Graph.
-        </p>
       </div>
 
       {error && (
@@ -49,17 +51,42 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
         </div>
       )}
 
-      <button
-        onClick={handleConnect}
-        disabled={loading}
-        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow-sm disabled:opacity-50 transition-colors"
-      >
-        {loading ? 'Verifying Session...' : 'Connect with Bahai.works'}
-      </button>
+      <form onSubmit={handleConnect} className="w-full space-y-3">
+        <input 
+          type="text" 
+          placeholder="Username (e.g. Sarah@RAGLibrarian)"
+          className="w-full p-2 text-sm border rounded"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          required
+        />
+        <input 
+          type="password" 
+          placeholder="Bot Password"
+          className="w-full p-2 text-sm border rounded"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+        />
+        
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow-sm disabled:opacity-50"
+        >
+          {loading ? 'Authenticating...' : 'Log In'}
+        </button>
+      </form>
 
-      <p className="mt-4 text-xs text-slate-400">
-        Requires an active session on bahai.works
-      </p>
+      <div className="mt-6 text-xs text-slate-400 text-left">
+        <p className="mb-1 font-semibold">How to get a Bot Password:</p>
+        <ol className="list-decimal pl-4 space-y-1">
+          <li>Go to <b>Special:BotPasswords</b> on Bahai.works</li>
+          <li>Create a new bot (e.g. named "RAGLibrarian")</li>
+          <li>Grant it <b>High-volume editing</b> (or basic rights)</li>
+          <li>Copy the password generated there.</li>
+        </ol>
+      </div>
     </div>
   );
 };
