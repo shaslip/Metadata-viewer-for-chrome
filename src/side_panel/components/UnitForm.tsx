@@ -43,51 +43,30 @@ export const UnitForm: React.FC<Props> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // SAFETY CHECK: We need Page Context (Source/PageID) to create a record.
-    if (!context) {
-        alert("Page context missing. Please refresh the page and try again.");
-        return;
-    }
-
+    if (!context && !isViewMode) return;
     setIsSubmitting(true);
 
     try {
-      // CONSTRUCT PAYLOAD
-      // If ViewMode: Reuse the existing unit's text/offsets
-      // If CreateMode: Use the selection/offsets props
-      const payload = {
-        source_code: context.source_code,
-        source_page_id: context.source_page_id,
-        text_content: isViewMode ? existingUnit!.text_content : selection,
-        start_char_index: isViewMode ? existingUnit!.start_char_index : offsets!.start,
-        end_char_index: isViewMode ? existingUnit!.end_char_index : offsets!.end,
-        author: formData.author,
-        unit_type: formData.unit_type,
-        tags: formData.tags
-      };
-
       if (isViewMode) {
-          // --- UPDATE LOGIC (Delete then Create) ---
-          console.log("Updating: Deleting old ID", existingUnit!.id);
-          
-          // 1. Delete Old
-          await del(`/api/units/${existingUnit!.id}`);
-          
-          // 2. Create New
-          await post('/api/contribute/unit', payload);
-          
-          // Optional: We assume success if no error thrown
-          // You might want a toast notification here
+          // UPDATE LOGIC (Placeholder for now)
+          alert("Update feature coming soon.");
       } else {
-          // --- CREATE LOGIC ---
+          // CREATE LOGIC
+          const payload = {
+            source_code: context!.source_code,
+            source_page_id: context!.source_page_id,
+            text_content: selection,
+            start_char_index: offsets!.start,
+            end_char_index: offsets!.end,
+            author: formData.author,
+            unit_type: formData.unit_type,
+            tags: formData.tags
+          };
           await post('/api/contribute/unit', payload);
+          alert("Unit Saved!");
       }
-
-      // Success Callback (Reloads tabs, clears selection)
       if (onSuccess) onSuccess();
       onCancel();
-
     } catch (err) {
       console.error(err);
       alert("Failed to save unit.");
