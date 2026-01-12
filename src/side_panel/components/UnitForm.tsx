@@ -10,11 +10,10 @@ interface Props {
   onCancel: () => void;
 }
 
-export const UnitForm: React.FC<Props> = ({ selection, context, onCancel }) => {
+export const UnitForm: React.FC<Props> = ({ selection, context, onCancel, offsets }) => {
   const { post } = useApi();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Form State
   const [formData, setFormData] = useState({
     author: "‘Abdu’l-Bahá",
     unit_type: 'tablet',
@@ -27,7 +26,6 @@ export const UnitForm: React.FC<Props> = ({ selection, context, onCancel }) => {
     setIsSubmitting(true);
 
     try {
-      // 1. Construct Payload
       const payload = {
         source_code: context.source_code,
         source_page_id: context.source_page_id,
