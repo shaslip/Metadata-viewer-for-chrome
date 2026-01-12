@@ -21,9 +21,9 @@ rag-librarian-extension/
 │   │   ├── context/
 │   │   │   └── UnitContext.tsx    # (Optional) Global state for cross-component data
 │   │   ├── components/
-│   │   │   ├── AuthGate.tsx       # "Connect to Bahai.works" Login Screen
+│   │   │   ├── AuthGate.tsx       # Handles the secure handshake between the browser cookie and API
 │   │   │   ├── UnitForm.tsx       # The Data Entry Form
-│   │   │   ├── TagInput.tsx       # Async Tag Autocomplete (Connecting to `defined_tags`)
+│   │   │   ├── TagInput.tsx       # This component allows multi-tag selection (TODO: add a GET /api/tags?search=... endpoint to your Express API later.)
 │   │   │   └── RelationshipManager.tsx # UI for linking units together
 │   │   └── hooks/
 │   │       └── useApi.ts          # Typed API wrapper with JWT handling
