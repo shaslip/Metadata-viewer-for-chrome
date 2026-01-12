@@ -128,7 +128,7 @@ export const UnitForm: React.FC<Props> = ({
         <select 
           className="w-full p-2 text-sm border rounded bg-white disabled:bg-slate-100 disabled:text-slate-500"
           value={formData.unit_type}
-          onChange={e => setFormData({...formData, unit_type: e.target.value})}
+          onChange={e => setFormData({...formData, unit_type: e.target.value as any})}
           disabled={!canEdit}
         >
           <option value="tablet">Tablet</option>
