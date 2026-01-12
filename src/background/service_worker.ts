@@ -8,7 +8,7 @@ chrome.action.onClicked.addListener((tab) => {
         path: 'public/side_panel.html',
         enabled: true
     });
-    chrome.sidePanel.open({ tabId: tab.id });
+    (chrome.sidePanel as any).open({ tabId: tab.id });
 });
 
 // 2. AUTHENTICATION HANDSHAKE
@@ -55,7 +55,7 @@ async function performHandshake() {
 
         return { success: true, user: data.username };
 
-    } catch (err) {
-        return { success: false, error: err.message };
+    } catch (err: any) {
+        return { success: false, error: err.message || "Unknown error" };
     }
 }
