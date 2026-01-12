@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Bahá’í RAG Librarian",
+  "version": "1.0",
+  "description": "Overlay RAG knowledge graphs onto certain Bahá’í websites",
+  "permissions": [
+    "cookies",
+    "storage",
+    "sidePanel",
+    "contextMenus",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.bahai.works/*",
+    "*://*.bahaipedia.org/*",
+    "*://*.bahaidata.org/*",
+    "*://digitalbahairesources.org/*",
+    "http://localhost:3008/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service_worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.bahai.works/*",
+        "*://*.bahaipedia.org/*"
+      ],
+      "js": ["src/content/index.js"],
+      "css": ["src/styles/overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "public/side_panel.html"
+  },
+  "action": {
+    "default_title": "Open RAG Librarian"
+  }
+}
