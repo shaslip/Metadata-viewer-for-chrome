@@ -18,21 +18,21 @@ metadata-viewer-for-chrome/
 │   │
 │   ├── side_panel/
 │   │   ├── index.tsx              # React Entry
-│   │   ├── App.tsx                # Routing: Show Login vs. Editor vs. Viewer
+│   │   ├── App.tsx                # Checks if the user is authenticated
 │   │   ├── context/
 │   │   │   └── UnitContext.tsx    # State: Holds the "Pinned" Unit ID (Active Subject) for cross-page linking
 │   │   ├── components/
 │   │   │   ├── AuthGate.tsx       # "Connect with MediaWiki" button
-│   │   │   ├── UnitForm.tsx       # Inputs: Type, Author, Tags (Auto-filled with selection text)
+│   │   │   ├── UnitForm.tsx       # Gathers the data and POSTs it to /api/contribute/unit endpoint
 │   │   │   ├── RelationshipManager.tsx # The "Linker": Shows Active Subject -> Connect to Current Selection
 │   │   │   └── TagInput.tsx       # Async Select for 'defined_tags' taxonomy
 │   │   └── hooks/
-│   │       └── useApi.ts          # Wrapper for fetch() that attaches the JWT automatically
+│   │       └── useApi.ts          # Helper ensures every request to API includes the JWT stored in chrome.storage.local
 │   │
 │   ├── utils/
 │   │   ├── api_client.ts          # Typed fetcher for your Express API (GET /units, POST /relationships)
 │   │   ├── offset_calculator.ts   # CRITICAL: Maps DOM Range <-> Database Integer Indices (start_char, end_char)
-│   │   ├── types.ts               # Interfaces: LogicalUnit, Relation, UserRole
+│   │   ├── types.ts               # Contract between the Extension and Database
 │   │   └── logger.ts              # Dev logging
 │   │
 │   └── styles/
