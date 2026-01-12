@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_BASE = "https://digitalbahairesources.org"; // Or localhost:3008
+const API_BASE = "https://digitalbahairesources.org";
 
 export const useApi = () => {
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +33,7 @@ export const useApi = () => {
   return {
     get: (url: string) => request(url, 'GET'),
     post: (url: string, data: any) => request(url, 'POST', data),
+    del: (url: string) => request(url, 'DELETE'),
     error
   };
 };
