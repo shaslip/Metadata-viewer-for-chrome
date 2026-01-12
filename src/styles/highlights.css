@@ -1,0 +1,33 @@
+/* Base Highlight */
+.rag-highlight {
+  background-color: rgba(255, 255, 0, 0.2); /* Subtle Yellow */
+  border-bottom: 2px solid rgba(218, 165, 32, 0.5);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.rag-highlight:hover {
+  background-color: rgba(255, 255, 0, 0.5);
+}
+
+/* Color Coding by Unit Type */
+.unit-type-prayer {
+  background-color: rgba(144, 238, 144, 0.2); /* Green tint */
+  border-bottom-color: green;
+}
+
+.unit-type-history {
+  background-color: rgba(173, 216, 230, 0.2); /* Blue tint */
+  border-bottom-color: blue;
+}
+
+.unit-type-question {
+  background-color: rgba(255, 182, 193, 0.2); /* Red tint */
+  border-bottom-color: red;
+}
+
+/* Active Selection (When clicking a highlight) */
+.rag-highlight.active {
+  background-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
