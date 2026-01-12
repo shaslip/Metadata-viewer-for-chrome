@@ -47,26 +47,35 @@ export const UnitForm: React.FC<Props> = ({
     setIsSubmitting(true);
 
     try {
+      // 1. Construct Payload
+      // If Updating (isViewMode): Use the existing unit's content/offsets
+      // If Creating: Use the selection/offsets passed in props
+      const payload = {
+        source_code: context.source_code,
+        source_page_id: context.source_page_id,
+        text_content: isViewMode ? existingUnit!.text_content : selection,
+        start_char_index: isViewMode ? existingUnit!.start_char_index : offsets!.start,
+        end_char_index: isViewMode ? existingUnit!.end_char_index : offsets!.end,
+        author: formData.author,
+        unit_type: formData.unit_type,
+        tags: formData.tags
+      };
+
       if (isViewMode) {
-          // UPDATE LOGIC (Placeholder for now)
-          alert("Update feature coming soon.");
+          // 1. Create the NEW record
+          await post('/api/contribute/unit', payload);
+          // 2. Delete the OLD record
+          await del(`/api/units/${existingUnit!.id}`);
+          alert("Unit Updated!");
       } else {
-          // CREATE LOGIC
-          const payload = {
-            source_code: context!.source_code,
-            source_page_id: context!.source_page_id,
-            text_content: selection,
-            start_char_index: offsets!.start,
-            end_char_index: offsets!.end,
-            author: formData.author,
-            unit_type: formData.unit_type,
-            tags: formData.tags
-          };
+          // --- CREATE LOGIC ---
           await post('/api/contribute/unit', payload);
           alert("Unit Saved!");
       }
+
       if (onSuccess) onSuccess();
       onCancel();
+
     } catch (err) {
       console.error(err);
       alert("Failed to save unit.");
