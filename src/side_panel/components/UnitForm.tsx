@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PageMetadata } from '@/utils/types';
-import { useApi } from '@/hooks/useApi'; // Custom hook to fetch with JWT
+import { useApi } from '@/hooks/useApi';
+import { TagInput } from './TagInput';
 
 interface Props {
   selection: string;
@@ -15,9 +16,9 @@ export const UnitForm: React.FC<Props> = ({ selection, context, onCancel }) => {
   
   // Form State
   const [formData, setFormData] = useState({
-    author: "Abdu'l-Baha", // Default
+    author: "‘Abdu’l-Bahá",
     unit_type: 'tablet',
-    tags: [] as string[]
+    tags: [] as number[]
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +35,8 @@ export const UnitForm: React.FC<Props> = ({ selection, context, onCancel }) => {
         start_char_index: offsets.start,
         end_char_index: offsets.end,
         author: formData.author,
-        unit_type: formData.unit_type
+        unit_type: formData.unit_type,
+        tags: formData.tags
       };
 
       // 2. Send to Node API
@@ -87,7 +89,12 @@ export const UnitForm: React.FC<Props> = ({ selection, context, onCancel }) => {
           <option value="question">Question & Answer</option>
         </select>
       </div>
-
+      <div className="mb-4">
+        <TagInput 
+          selectedTags={formData.tags}
+          onChange={(ids) => setFormData({...formData, tags: ids})} 
+        />
+      </div>
       <div className="flex gap-2 pt-2">
         <button 
           type="button" 
