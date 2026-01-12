@@ -43,33 +43,48 @@ export const UnitForm: React.FC<Props> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!context && !isViewMode) return;
     setIsSubmitting(true);
 
     try {
+      // 1. Prepare Data
+      // If ViewMode: We MUST use the unit's stored context (from the GET fix above)
+      // If CreateMode: We use the active page context
+      const payloadSourceCode = isViewMode ? (existingUnit as any).source_code : context?.source_code;
+      const payloadPageId     = isViewMode ? (existingUnit as any).source_page_id : context?.source_page_id;
+
+      if (!payloadSourceCode || !payloadPageId) {
+          throw new Error("Missing Source Context. Cannot create record.");
+      }
+
+      const payload = {
+        source_code: payloadSourceCode,
+        source_page_id: payloadPageId,
+        text_content: isViewMode ? existingUnit!.text_content : selection,
+        start_char_index: isViewMode ? existingUnit!.start_char_index : offsets!.start,
+        end_char_index: isViewMode ? existingUnit!.end_char_index : offsets!.end,
+        author: formData.author,
+        unit_type: formData.unit_type,
+        tags: formData.tags
+      };
+
       if (isViewMode) {
-          // UPDATE LOGIC (Placeholder for now)
-          alert("Update feature coming soon.");
+          // --- UPDATE STRATEGY: CREATE NEW -> DELETE OLD ---
+          // This generates a new ID so the sync system picks it up.
+          await post('/api/contribute/unit', payload);
+          await del(`/api/units/${existingUnit!.id}`);
+          alert("Unit Updated (New ID Generated)");
       } else {
-          // CREATE LOGIC
-          const payload = {
-            source_code: context!.source_code,
-            source_page_id: context!.source_page_id,
-            text_content: selection,
-            start_char_index: offsets!.start,
-            end_char_index: offsets!.end,
-            author: formData.author,
-            unit_type: formData.unit_type,
-            tags: formData.tags
-          };
+          // --- CREATE STRATEGY ---
           await post('/api/contribute/unit', payload);
           alert("Unit Saved!");
       }
+
       if (onSuccess) onSuccess();
       onCancel();
-    } catch (err) {
+
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to save unit.");
+      alert(err.message || "Failed to save unit.");
     } finally {
       setIsSubmitting(false);
     }
