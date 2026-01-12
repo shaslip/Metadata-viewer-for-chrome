@@ -75,6 +75,17 @@ export const UnitForm: React.FC<Props> = ({
     }
   };
 
+  // Modified Cancel Handler
+  const handleCancel = () => {
+    if (deleteConfirmOpen) {
+        // If confirming delete, "Cancel" just backs out of the delete mode
+        setDeleteConfirmOpen(false);
+    } else {
+        // Otherwise, it closes the form
+        onCancel();
+    }
+  };
+
   const handleDelete = async () => {
       // Step 1: Open Confirmation
       if (!deleteConfirmOpen) {
