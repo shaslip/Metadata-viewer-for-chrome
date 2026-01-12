@@ -187,27 +187,33 @@ export const UnitForm: React.FC<Props> = ({
         {/* CASE C: HAS PERMISSION (Cancel / Update / Delete) */}
         {isViewMode && canEdit && (
             <>
-                {/* Hide Cancel if Delete Confirmation is open to reduce clutter */}
-                {!deleteConfirmOpen && (
-                    <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">
-                        Cancel
-                    </button>
-                )}
+                {/* 1. Cancel Button: Always visible, changes behavior based on state */}
+                <button 
+                    type="button" 
+                    onClick={handleCancel} 
+                    className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded border border-transparent hover:border-slate-300"
+                >
+                    {deleteConfirmOpen ? 'Cancel' : 'Close'} 
+                </button>
 
+                {/* 2. Update Button: Hidden during delete confirmation to reduce noise */}
                 {!deleteConfirmOpen && (
                     <button type="submit" className="flex-1 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
                         Update
                     </button>
                 )}
 
+                {/* 3. Delete Button: Changes color/text when confirming */}
                 <button 
                     type="button"
                     onClick={handleDelete}
-                    className={`px-3 py-2 text-sm rounded text-white transition-all duration-200 ${
-                        deleteConfirmOpen ? 'w-full bg-red-600 hover:bg-red-700 font-bold' : 'bg-red-100 text-red-600 hover:bg-red-200'
+                    className={`px-3 py-2 text-sm rounded transition-all duration-200 border ${
+                        deleteConfirmOpen 
+                            ? 'flex-1 bg-red-600 text-white border-red-700 hover:bg-red-700 font-bold' // Confirm State
+                            : 'bg-white text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300' // Initial State (Clean, not muted)
                     }`}
                 >
-                    {deleteConfirmOpen ? "Are you sure? Click to Delete." : "Delete"}
+                    {deleteConfirmOpen ? "Confirm Delete?" : "Delete"}
                 </button>
             </>
         )}
