@@ -27,6 +27,7 @@
         "*://*.bahaipedia.org/*"
       ],
       "js": ["src/content/content.js"],
+      "css": ["assets/highlights.css"],
       "run_at": "document_idle"
     }
   ],
