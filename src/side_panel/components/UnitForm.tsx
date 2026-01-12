@@ -67,7 +67,7 @@ export const UnitForm: React.FC<Props> = ({ selection, context, onCancel, offset
         >
           <option>Bahá’u’lláh</option>
           <option>The Báb</option>
-          <option>Abdu'l-Baha</option>
+          <option>‘Abdu’l-Bahá</option>
           <option>Shoghi Effendi</option>
           <option>Universal House of Justice</option>
         </select>
