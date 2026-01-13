@@ -2,10 +2,15 @@ import { getPageMetadata } from './scraper';
 import { findRangeFromOffsets } from '@/utils/offset_calculator';
 import { LogicalUnit } from '@/utils/types';
 
-export const initHighlighter = async () => {
+// --- Global State for Highlighter ---
+let cachedUnits: LogicalUnit[] = [];
+let currentMode: string = 'CREATE_MODE'; // Default
+// ------------------------------------
 
+export const initHighlighter = async () => {
     const meta = getPageMetadata();
     
+    // 1. Fetch Data
     const response = await chrome.runtime.sendMessage({
         type: 'FETCH_PAGE_DATA',
         source_code: meta.source_code,
@@ -13,10 +18,45 @@ export const initHighlighter = async () => {
     });
 
     if (response && response.units) {
-        response.units.forEach((unit: LogicalUnit) => {
-            highlightUnit(unit);
-        });
+        cachedUnits = response.units; // Store, don't render yet
+        renderHighlights(); // Render based on default mode
     }
+
+    // 2. Listen for Mode Changes from Side Panel
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'SET_HIGHLIGHT_MODE') {
+            currentMode = message.mode;
+            renderHighlights();
+        }
+    });
+};
+
+const renderHighlights = () => {
+    // 1. Clear Existing Highlights
+    document.querySelectorAll('.rag-highlight').forEach(el => {
+        const parent = el.parentNode;
+        if (parent) {
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+        }
+    });
+
+    // 2. Filter Units based on Mode
+    const unitsToRender = cachedUnits.filter(unit => {
+        if (currentMode === 'QA_MODE') {
+            // Only show Canonical Answers
+            return unit.unit_type === 'canonical_answer';
+        }
+        if (currentMode === 'CREATE_MODE') {
+            // Show everything EXCEPT canonical answers (or show all, depending on preference)
+            // Usually simpler to show generic content units here.
+            return unit.unit_type !== 'canonical_answer'; 
+        }
+        return false; // Hide highlights on other tabs for now
+    });
+
+    // 3. Draw
+    unitsToRender.forEach(highlightUnit);
 };
 
 const highlightUnit = (unit: LogicalUnit) => {
@@ -37,16 +77,13 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
     const commonAncestor = range.commonAncestorContainer;
     const nodesToWrap: { node: Node, start: number, end: number }[] = [];
 
-    // CASE 1: Single Node
     if (commonAncestor.nodeType === Node.TEXT_NODE) {
         nodesToWrap.push({
             node: commonAncestor,
             start: range.startOffset,
             end: range.endOffset
         });
-    } 
-    // CASE 2: Multi Node
-    else {
+    } else {
         const walker = document.createTreeWalker(
             commonAncestor,
             NodeFilter.SHOW_TEXT,
@@ -69,17 +106,17 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
             if (currentNode.textContent && currentNode.textContent.trim().length > 0) {
                  nodesToWrap.push({ node: currentNode, start: startOffset, end: endOffset });
             }
-           
+            
             currentNode = walker.nextNode();
         }
     }
 
     nodesToWrap.forEach(({ node, start, end }) => {
         const wrapper = document.createElement('span');
+        // Add specific class for CSS styling per mode if needed
         wrapper.className = `rag-highlight unit-type-${unit.unit_type || 'default'}`;
         wrapper.dataset.unitId = String(unit.id);
         
-        // --- ADDED: Unified Hover Effect ---
         wrapper.addEventListener('mouseenter', () => {
             const allParts = document.querySelectorAll(`.rag-highlight[data-unit-id="${unit.id}"]`);
             allParts.forEach(el => el.classList.add('active'));
@@ -89,7 +126,6 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
             const allParts = document.querySelectorAll(`.rag-highlight[data-unit-id="${unit.id}"]`);
             allParts.forEach(el => el.classList.remove('active'));
         });
-        // -----------------------------------
 
         wrapper.addEventListener('click', (e) => {
             e.stopPropagation(); 
