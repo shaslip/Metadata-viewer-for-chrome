@@ -5,17 +5,14 @@ interface SelectionState {
   text: string;
   offsets: { start: number; end: number };
   context: PageMetadata;
-  viewMode: 'mine' | 'all';
-  setViewMode: (mode: 'mine' | 'all') => void;
 }
 
 interface SelectionContextType {
-  // The raw text selection (Create Mode)
   currentSelection: SelectionState | null;
-  // The clicked existing unit (View/Edit Mode)
   selectedUnit: (LogicalUnit & { can_delete?: boolean }) | null;
-  
   clearSelection: () => void;
+  viewMode: 'mine' | 'all';
+  setViewMode: (mode: 'mine' | 'all') => void;
 }
 
 const SelectionContext = createContext<SelectionContextType | undefined>(undefined);
@@ -29,7 +26,7 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
     const handleMessage = (request: any) => {
       // CASE 1: New Text Selected
       if (request.type === 'TEXT_SELECTED') {
-        setSelectedUnit(null); // Deselect existing unit
+        setSelectedUnit(null); 
         setCurrentSelection({
           text: request.text,
           offsets: request.offsets,
@@ -39,14 +36,13 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
       
       // CASE 2: Existing Unit Clicked
       if (request.type === 'UNIT_CLICKED') {
-        setCurrentSelection(null); // Deselect raw text
+        setCurrentSelection(null); 
         setSelectedUnit(request.unit);
       }
 
       // CASE 3: Cleared
       if (request.type === 'SELECTION_CLEARED') {
         setCurrentSelection(null);
-        // We do NOT clear selectedUnit here to allow reading while scrolling
       }
     };
 
@@ -65,7 +61,7 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <SelectionContext.Provider value={{ currentSelection, selectedUnit, clearSelection }}>
+    <SelectionContext.Provider value={{ currentSelection, selectedUnit, clearSelection, viewMode, setViewMode }}>
       {children}
     </SelectionContext.Provider>
   );
