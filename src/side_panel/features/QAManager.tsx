@@ -16,22 +16,17 @@ export const QAManager = () => {
   const [answer, setAnswer] = useState<StagedAnswer | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- 1. MODE DETECTION: Load data when an existing unit is clicked ---
+  // --- 1. Edit Mode: Load existing QA ---
   useEffect(() => {
     const loadEditMode = async () => {
       if (selectedUnit && selectedUnit.unit_type === 'canonical_answer') {
-        // A. Set Answer Context
         setAnswer({ type: 'existing', unit: selectedUnit });
         setAuthor(selectedUnit.author || "‘Abdu’l-Bahá");
 
-        // B. Fetch the Linked Question
-        // (Assumes an endpoint exists: GET /api/qa?answer_unit_id=123)
         try {
           const res = await get(`/api/qa?answer_unit_id=${selectedUnit.id}`);
           if (res && res.length > 0) {
              setQuestionText(res[0].question_text);
-          } else {
-             setQuestionText(''); // Should not happen for valid QA units
           }
         } catch (e) {
           console.error("Failed to fetch linked question", e);
@@ -41,11 +36,41 @@ export const QAManager = () => {
     loadEditMode();
   }, [selectedUnit]);
 
-  // --- 2. HANDLERS ---
+  // --- 2. Helpers ---
+
+  // Extracts "Some Answered Questions" from "https://bahai.works/Some_Answered_Questions/17"
+  const deriveBookTitle = async (): Promise<string> => {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs[0];
+    if (!tab || !tab.url) return "Unknown Source";
+
+    try {
+        const urlObj = new URL(tab.url);
+        
+        // Strategy A: URL Parsing (Preferred for bahai.works)
+        // Path: /Some_Answered_Questions/17 -> "Some Answered Questions"
+        const pathSegments = urlObj.pathname.split('/').filter(p => p);
+        if (pathSegments.length > 0) {
+            // Take the first segment (Book Name) and remove underscores
+            let bookTitle = pathSegments[0].replace(/_/g, ' ');
+            // Decode URI components (e.g. %20 -> space)
+            return decodeURIComponent(bookTitle);
+        }
+
+        // Strategy B: Title Parsing (Fallback)
+        // Title: "Some Answered Questions/17 - Bahaiworks..."
+        if (tab.title) {
+            const titlePart = tab.title.split('-')[0].trim(); // "Some Answered Questions/17"
+            return titlePart.split('/')[0].trim(); // "Some Answered Questions"
+        }
+    } catch (e) {
+        console.warn("Error parsing book title:", e);
+    }
+    return "Unknown Book";
+  };
 
   const handleSetAnswer = () => {
     if (selectedUnit) {
-      // (This path is mostly redundant now due to useEffect, but good for safety)
       setAnswer({ type: 'existing', unit: selectedUnit });
       clearSelection();
     } else if (currentSelection) {
@@ -72,7 +97,7 @@ export const QAManager = () => {
     setIsSubmitting(true);
     try {
         await del(`/api/units/${answer.unit.id}`);
-        alert("Deleted successfully.");
+        // No manual delete for QA needed; DB Cascade handles it
         handleCancel();
         chrome.tabs.reload();
     } catch (e: any) {
@@ -87,24 +112,28 @@ export const QAManager = () => {
     setIsSubmitting(true);
 
     try {
-      // STEP 1: If Updating, Delete the OLD unit first.
-      // (This creates a clean slate and ensures RAG safety)
+      // 1. Calculate Source Book from Client Context (URL/Title)
+      const bookTitle = await deriveBookTitle();
+
+      // 2. If Updating: Delete OLD unit to reset ID
       if (answer.type === 'existing') {
         await del(`/api/units/${answer.unit.id}`);
       }
 
-      // STEP 2: Prepare New Data
+      // 3. Prepare Data
+      // For existing units, we trust the CURRENT page context for source_code/id 
+      // because the unit is highlighted on the page we are looking at.
+      const context = answer.type === 'existing' 
+        ? answer.context || (await getPageContextFromTab()) // Fallback if context missing
+        : answer.context;
+
       const textToSave = answer.type === 'existing' ? answer.unit.text_content : answer.text;
       
       const offsets = answer.type === 'existing' 
         ? { start: answer.unit.start_char_index, end: answer.unit.end_char_index }
         : answer.offsets;
-        
-      const context = answer.type === 'existing' 
-        ? { source_code: answer.unit.source_code, source_page_id: answer.unit.source_page_id } // Ensure your LogicalUnit type includes these!
-        : answer.context;
 
-      // STEP 3: Create NEW Unit
+      // 4. Create NEW Unit
       const unitRes = await post('/api/contribute/unit', {
         source_code: context.source_code,
         source_page_id: context.source_page_id,
@@ -115,11 +144,11 @@ export const QAManager = () => {
         unit_type: "canonical_answer"
       });
 
-      // STEP 4: Create NEW Question Link
+      // 5. Create NEW Question (Using Client-Derived Book Title)
       await post('/api/contribute/qa', {
         question_text: questionText,
         answer_unit_id: unitRes.unit_id,
-        source_book: context.source_code 
+        source_book: bookTitle 
       });
 
       alert(answer.type === 'existing' ? "Q&A Updated!" : "Q&A Created!");
@@ -134,11 +163,22 @@ export const QAManager = () => {
     }
   };
 
-  // --- 3. RENDER HELPERS ---
-  
+  // Helper to get page context if 'answer.type === existing' logic needs it
+  // (Assuming your scraper normally puts this in currentSelection, but existing units lack it)
+  const getPageContextFromTab = async () => {
+     // This relies on your scraper having run. 
+     // A cleaner way is to message the content script, 
+     // but for now, we can try to use global variables or just assume the scraper is active.
+     // If you have the scraper metadata stored in `SelectionContext` (even when nothing selected), use that.
+     // Otherwise, we might need a quick message dispatch here.
+     const response = await chrome.tabs.sendMessage(
+        (await chrome.tabs.query({active:true}))[0].id!, 
+        { type: "GET_PAGE_METADATA" }
+     );
+     return response;
+  };
+
   const isEditMode = answer?.type === 'existing';
-  
-  // Note: Check your LogicalUnit type definition to ensure `can_delete` is present
   const canDelete = isEditMode && (answer.unit as any).can_delete; 
 
   return (
