@@ -78,7 +78,7 @@ export const TaxonomyExplorer = () => {
             }`}
           >
             <BuildingLibraryIcon className="w-3 h-3 mr-1" />
-            View All
+            View Examples
           </button>
         </div>
 
