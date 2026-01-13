@@ -12,8 +12,6 @@
   ],
   "host_permissions": [
     "*://*.bahai.works/*",
-    "*://*.bahaipedia.org/*",
-    "*://*.bahaidata.org/*",
     "*://digitalbahairesources.org/*",
     "http://localhost:3008/*"
   ],
@@ -23,8 +21,7 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.bahai.works/*",
-        "*://*.bahaipedia.org/*"
+        "*://*.bahai.works/*"
       ],
       "js": ["src/content/content.js"],
       "css": ["assets/index.css"],
