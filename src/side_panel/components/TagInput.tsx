@@ -1,5 +1,6 @@
 import React, { useState, useEffect, KeyboardEvent } from 'react';
 import { useApi } from '@/hooks/useApi';
+import { BuildingLibraryIcon, UserIcon, PlusIcon } from '@heroicons/react/24/solid';
 
 interface Tag {
   id: number | string; 
@@ -102,14 +103,27 @@ export const TagInput: React.FC<Props> = ({ selectedTags, onChange, disabled }) 
       />
 
       {!disabled && suggestions.length > 0 && (
-        <ul className="absolute z-10 w-full bg-white border border-slate-200 rounded shadow-lg mt-1 max-h-32 overflow-y-auto">
+        <ul className="absolute z-10 w-full bg-white border border-slate-200 rounded shadow-lg mt-1 max-h-48 overflow-y-auto">
           {suggestions.map((tag: any) => (
             <li 
               key={tag.id}
               onClick={() => addTag(tag)}
-              className="px-3 py-2 text-sm hover:bg-slate-100 cursor-pointer text-slate-700"
+              className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer text-slate-700 flex items-center justify-between group"
             >
-              {tag.label}
+              <div className="flex items-center">
+                {tag.is_official ? (
+                  <BuildingLibraryIcon className="w-3.5 h-3.5 text-amber-500 mr-2" />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-slate-400 mr-2 group-hover:text-blue-500" />
+                )}
+                <span>{tag.label}</span>
+              </div>
+              
+              {tag.is_official && (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                  Official
+                </span>
+              )}
             </li>
           ))}
         </ul>
