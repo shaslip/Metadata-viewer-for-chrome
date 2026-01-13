@@ -67,36 +67,43 @@ export const RelationshipManager = () => {
         setSubject(result.linkerState.subject);
         setObject(result.linkerState.object);
         setRelType(result.linkerState.relType || 'commentary');
+        setSubjectAuthor(result.linkerState.subjectAuthor || 'Other');
+        setObjectAuthor(result.linkerState.objectAuthor || 'Other');
       }
     });
   }, []);
 
   // Helper to update state AND storage
   const updateState = (
-    key: 'subject' | 'object' | 'relType' | 'clear', 
+    key: 'subject' | 'object' | 'relType' | 'subjectAuthor' | 'objectAuthor' | 'clear', 
     value: any
   ) => {
     if (key === 'clear') {
       setSubject(null);
       setObject(null);
+      setSubjectAuthor('Other');
+      setObjectAuthor('Other');
       setRelType('commentary');
       chrome.storage.local.remove('linkerState');
       return;
     }
 
-    // Calculate new state based on current values
-    const newState = {
-      subject: key === 'subject' ? value : subject,
-      object: key === 'object' ? value : object,
-      relType: key === 'relType' ? value : relType
-    };
-
-    // Update React State
+    // React State
     if (key === 'subject') setSubject(value);
     if (key === 'object') setObject(value);
     if (key === 'relType') setRelType(value);
+    if (key === 'subjectAuthor') setSubjectAuthor(value);
+    if (key === 'objectAuthor') setObjectAuthor(value);
 
-    // Update Storage
+    // Persistence Calculation
+    const newState = {
+      subject: key === 'subject' ? value : subject,
+      object: key === 'object' ? value : object,
+      relType: key === 'relType' ? value : relType,
+      subjectAuthor: key === 'subjectAuthor' ? value : subjectAuthor,
+      objectAuthor: key === 'objectAuthor' ? value : objectAuthor,
+    };
+
     chrome.storage.local.set({ linkerState: newState });
   };
 
