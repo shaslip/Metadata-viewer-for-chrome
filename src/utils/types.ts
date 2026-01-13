@@ -3,7 +3,7 @@ export interface LogicalUnit {
   article_id?: number;
   text_content: string;
   author: string;
-  unit_type: 'tablet' | 'prayer' | 'talk' | 'history' | 'other';
+  unit_type: 'tablet' | 'prayer' | 'talk' | 'history' | 'canonical_answer' | 'other';
   start_char_index: number; 
   end_char_index: number;
   tags: (number | string)[]; 
