@@ -161,7 +161,19 @@ const TaxonomyNode = ({ node }: { node: TreeNode & { forceExpand?: boolean } }) 
              <span className="w-4 h-4 inline-block" /> // spacer
           )}
         </span>
-        <span className="font-medium">{node.label}</span>
+        
+        {/* ICON BASED ON SCOPE */}
+        <span className="mr-1.5" title={node.is_official ? "Official Tag" : "Personal Tag"}>
+          {node.is_official ? (
+            <BuildingLibraryIcon className="h-3.5 w-3.5 text-amber-500" />
+          ) : (
+            <UserIcon className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-500" />
+          )}
+        </span>
+
+        <span className={node.is_official ? "font-semibold text-slate-800" : "font-medium text-slate-600"}>
+          {node.label}
+        </span>
       </div>
 
       {/* Children & Units */}
