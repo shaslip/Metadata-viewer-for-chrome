@@ -4,8 +4,8 @@ import { useApi } from '@/hooks/useApi';
 import { StagedItem } from '@/utils/types'; // Import from types now
 
 export const RelationshipManager = () => {
-  const { currentSelection, selectedUnit } = useSelection();
-  const { post, get } = useApi();
+  const { currentSelection, selectedUnit, clearSelection } = useSelection();
+  const { post, get, del } = useApi();
   
   const [subject, setSubject] = useState<StagedItem | null>(null);
   const [object, setObject] = useState<StagedItem | null>(null);
@@ -94,6 +94,54 @@ export const RelationshipManager = () => {
     if (currentSelection) return { type: 'new', ...currentSelection };
     return null;
   };
+
+  const handleDelete = async () => {
+    if (!selectedUnit?.id) return;
+    if (!confirm("Are you sure you want to delete this link? Both ends will be removed.")) return;
+
+    setIsSubmitting(true);
+    try {
+      await del(`/api/contribute/unit/${selectedUnit.id}`);
+      alert("Link deleted.");
+      clearSelection();
+      chrome.tabs.reload();
+    } catch (e: any) {
+      alert("Error deleting: " + e.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- NEW: View Mode for Existing Links ---
+  if (selectedUnit && (selectedUnit.unit_type === 'link_subject' || selectedUnit.unit_type === 'link_object')) {
+    return (
+      <div className="p-4 space-y-4">
+         <h2 className="text-lg font-bold text-slate-800">Manage Link</h2>
+         <div className="p-4 bg-slate-100 rounded border border-slate-300">
+            <span className="text-xs font-bold text-slate-500 uppercase block mb-2">
+              Selected {selectedUnit.unit_type === 'link_subject' ? 'Subject' : 'Object'}
+            </span>
+            <p className="text-sm italic text-slate-700 mb-4">"{selectedUnit.text_content}"</p>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={clearSelection}
+                className="flex-1 py-2 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50"
+              >
+                Back
+              </button>
+              <button 
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="flex-1 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                {isSubmitting ? "Deleting..." : "Delete Link"}
+              </button>
+            </div>
+         </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     if (!subject || !object) return;
