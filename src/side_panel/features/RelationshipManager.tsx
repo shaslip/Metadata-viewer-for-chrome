@@ -175,7 +175,7 @@ export const RelationshipManager = () => {
           text_content: subject.text,
           start_char_index: subject.offsets.start,
           end_char_index: subject.offsets.end,
-          author: "Unknown",
+          author: subjectAuthor,
           unit_type: "link_subject"
         });
         subjectId = res.unit_id;
@@ -190,7 +190,7 @@ export const RelationshipManager = () => {
           text_content: object.text,
           start_char_index: object.offsets.start,
           end_char_index: object.offsets.end,
-          author: "Unknown",
+          author: objectAuthor,
           unit_type: "link_object"
         });
         objectId = res.unit_id;
@@ -215,6 +215,29 @@ export const RelationshipManager = () => {
       setIsSubmitting(false);
     }
   };
+
+  // --- Helper Component for Author Dropdown ---
+  const AuthorSelect = ({ 
+    value, 
+    onChange, 
+    disabled 
+  }: { value: string, onChange: (val: string) => void, disabled?: boolean }) => (
+    <div className="mt-2">
+      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
+        Author / Speaker
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full text-xs border-slate-300 rounded p-1.5 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      >
+        {AUTHOR_OPTIONS.map(opt => (
+          <option key={opt} value={opt}>{opt === 'Other' ? 'All others' : opt}</option>
+        ))}
+      </select>
+    </div>
+  );
 
   return (
     <div className="p-4 space-y-6">
