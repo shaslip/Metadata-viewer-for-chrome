@@ -1,22 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useApi } from '@/hooks/useApi';
 import { DefinedTag, LogicalUnit } from '@/utils/types';
-import { ChevronRightIcon, ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import { useSelection } from '@/context/SelectionContext';
+import { ChevronRightIcon, ChevronDownIcon, MagnifyingGlassIcon, UserIcon, BuildingLibraryIcon } from '@heroicons/react/24/solid';
 
 // Extended type for tree logic
 interface TreeNode extends DefinedTag {
   children: TreeNode[];
-  units?: LogicalUnit[]; // Loaded on demand or preloaded
+  units?: LogicalUnit[];
 }
 
 export const TaxonomyExplorer = () => {
   const { get } = useApi();
+  const { viewMode, setViewMode } = useSelection();
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock API call - replace with actual endpoint
     get('/api/tags/tree')
       .then((data) => setTree(data))
       .catch((err) => console.error("Failed to load taxonomy", err))
@@ -24,32 +25,70 @@ export const TaxonomyExplorer = () => {
   }, []);
 
   // Recursive Filter Logic
-  const filterNodes = (nodes: TreeNode[], query: string): TreeNode[] => {
+  const filterNodes = (nodes: TreeNode[], query: string, mode: 'mine' | 'all'): TreeNode[] => {
     return nodes
       .map(node => {
-        const matchesSelf = node.label.toLowerCase().includes(query.toLowerCase());
-        const filteredChildren = filterNodes(node.children || [], query);
+        const matchesText = node.label.toLowerCase().includes(query.toLowerCase());
         
-        if (matchesSelf || filteredChildren.length > 0) {
-          return { ...node, children: filteredChildren, forceExpand: !!query }; // Auto-expand on search
+        // 2. Mode Match (If mode is 'mine', hide official tags unless they have 'my' children?)
+        // actually, simpler: If mode is 'mine', only show nodes that are NOT official (or have user contributions).
+        // For MVP: Let's assume the API returns (Official + Mine). 
+        // We filter out 'is_official' if mode === 'mine', unless you want to see the official PARENT of your tag.
+        
+        // Let's stick to simple text filtering for now, and let the Toggle control the API or specific visual cues.
+        // If you want strict filtering:
+        if (mode === 'mine' && node.is_official) {
+           // This logic depends on if you want to see the "Structure" (Official) that holds your "Content" (Private)
+           // usually yes, so we might just filter LEAF nodes. 
+           // For now, let's keep the Tree unified but use the toggle to filter HIGHLIGHTS on page.
+        }
+        
+        const filteredChildren = filterNodes(node.children || [], query, mode);
+        
+        if (matchesText || filteredChildren.length > 0) {
+          return { ...node, children: filteredChildren, forceExpand: !!query }; 
         }
         return null;
       })
       .filter(Boolean) as TreeNode[];
   };
 
-  const displayTree = filter ? filterNodes(tree, filter) : tree;
+  const displayTree = filterNodes(tree, filter, viewMode);
 
   return (
     <div className="flex flex-col h-full">
-      {/* SEARCH HEADER */}
-      <div className="p-4 border-b border-slate-200 bg-white sticky top-0 z-10">
+      {/* HEADER: Search + Toggle */}
+      <div className="p-4 border-b border-slate-200 bg-white sticky top-0 z-10 space-y-3">
+        
+        {/* View Mode Toggle */}
+        <div className="flex bg-slate-100 p-1 rounded-lg">
+          <button
+            onClick={() => setViewMode('mine')}
+            className={`flex-1 flex items-center justify-center py-1 text-xs font-semibold rounded-md transition-colors ${
+              viewMode === 'mine' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <UserIcon className="w-3 h-3 mr-1" />
+            My Tags
+          </button>
+          <button
+            onClick={() => setViewMode('all')}
+            className={`flex-1 flex items-center justify-center py-1 text-xs font-semibold rounded-md transition-colors ${
+              viewMode === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <BuildingLibraryIcon className="w-3 h-3 mr-1" />
+            View All
+          </button>
+        </div>
+
+        {/* Search Bar */}
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
           <input 
             type="text" 
-            placeholder="Filter tags..." 
-            className="w-full pl-8 pr-2 py-2 text-sm border rounded bg-slate-50 focus:bg-white"
+            placeholder="Filter taxonomy..." 
+            className="w-full pl-8 pr-2 py-2 text-sm border rounded bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
