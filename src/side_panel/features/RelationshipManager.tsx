@@ -5,15 +5,51 @@ import { StagedItem } from '@/utils/types'; // Import from types now
 
 export const RelationshipManager = () => {
   const { currentSelection, selectedUnit } = useSelection();
-  const { post } = useApi();
+  const { post, get } = useApi();
   
   const [subject, setSubject] = useState<StagedItem | null>(null);
   const [object, setObject] = useState<StagedItem | null>(null);
   const [relType, setRelType] = useState('commentary');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- NEW: Persistence Logic ---
-  // 1. Load state from storage on mount
+  // Load existing relationships when this tab opens
+  useEffect(() => {
+    const fetchAndHighlight = async () => {
+      // 1. Get current page context (You might need a helper for this if you don't have one)
+      // Assuming you can get the current active tab's URL/Context
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab.id) return;
+
+      // We need source_code/page_id. 
+      // Option A: Ask content script for it
+      const metadata = await chrome.tabs.sendMessage(tab.id, { type: 'GET_METADATA' });
+      
+      if (metadata && metadata.source_code) {
+        // 2. Fetch from API
+        const rels = await get(`/api/relationships?source_code=${metadata.source_code}&source_page_id=${metadata.source_page_id}`);
+        
+        // 3. Send to Content Script to Highlight
+        // We map the relationships back to a structure the highlighter understands
+        const unitsToHighlight = rels.flatMap((r: any) => {
+             // Create highlightable units for both subject and object if they are on this page
+             const units = [];
+             if (r.subject_page_id === metadata.source_page_id) {
+                 units.push({ ...r, ...r.subject_unit, unit_type: 'link_subject', id: r.subject_unit_id });
+             }
+             if (r.object_page_id === metadata.source_page_id) {
+                 units.push({ ...r, ...r.object_unit, unit_type: 'link_object', id: r.object_unit_id });
+             }
+             return units;
+        });
+
+        chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_HIGHLIGHTS', units: unitsToHighlight });
+      }
+    };
+
+    fetchAndHighlight();
+  }, []);
+
+  // Load state from storage on mount
   useEffect(() => {
     chrome.storage.local.get(['linkerState'], (result) => {
       if (result.linkerState) {
@@ -24,7 +60,7 @@ export const RelationshipManager = () => {
     });
   }, []);
 
-  // 2. Helper to update state AND storage
+  // Helper to update state AND storage
   const updateState = (
     key: 'subject' | 'object' | 'relType' | 'clear', 
     value: any
