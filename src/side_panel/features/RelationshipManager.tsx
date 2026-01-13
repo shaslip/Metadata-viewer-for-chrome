@@ -178,6 +178,8 @@ export const RelationshipManager = () => {
         objectId = res.unit_id;
       }
 
+      if (!subjectId || !objectId) throw new Error("Failed to resolve Unit IDs");
+
       // 3. Create Relationship
       await post('/api/contribute/relationship', {
         subject_unit_id: subjectId,
