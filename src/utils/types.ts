@@ -38,3 +38,7 @@ export interface DefinedTag {
   parent_id?: number;
   description?: string;
 }
+
+export type StagedItem = 
+  | { type: 'existing', unit: LogicalUnit }
+  | { type: 'new', text: string, offsets: { start: number, end: number }, context: PageMetadata };
