@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Bahá’í Text Cataloger",
+  "name": "Catalog Manager for Bahá’í Text",
   "version": "1.0",
-  "description": "Overlay knowledge graphs onto Bahá’í documents",
+  "description": "Create and overlay knowledge graphs onto Bahá’í related text",
   "permissions": [
     "cookies",
     "storage",
@@ -32,6 +32,6 @@
     "default_path": "side_panel.html"
   },
   "action": {
-    "default_title": "Open text catalog"
+    "default_title": "Open catalog manager"
   }
 }
