@@ -4,19 +4,18 @@ import { LogicalUnit } from '@/utils/types';
 
 // --- Global State for Highlighter ---
 let cachedUnits: LogicalUnit[] = [];
-let currentMode: string = 'CREATE_MODE'; // Default
-// ------------------------------------
+let currentMode: string = 'CREATE_MODE'; 
 
 export const initHighlighter = async () => {
     const meta = getPageMetadata();
     
-    // 1. CHANGED: Load the active mode from storage immediately
+    // 1. Load active mode
     const storageResult = await chrome.storage.local.get('highlightMode');
     if (storageResult.highlightMode) {
         currentMode = storageResult.highlightMode;
     }
     
-    // 2. Fetch Data
+    // 2. Fetch Initial Page Data (Standard Units)
     const response = await chrome.runtime.sendMessage({
         type: 'FETCH_PAGE_DATA',
         source_code: meta.source_code,
@@ -28,10 +27,25 @@ export const initHighlighter = async () => {
         renderHighlights(); 
     }
 
-    // 3. CHANGED: Listen to Storage changes (Handles tab switching in Side Panel)
+    // 3. Listen to Storage changes (Tab Switching)
     chrome.storage.onChanged.addListener((changes, area) => {
         if (area === 'local' && changes.highlightMode) {
             currentMode = changes.highlightMode.newValue;
+            renderHighlights();
+        }
+    });
+
+    // 4. NEW: Listen for Relationship Updates from Side Panel
+    // This allows the React App to inject "link_subject" types that might 
+    // strictly be "other" in the DB, ensuring they show up in the correct color.
+    chrome.runtime.onMessage.addListener((request) => {
+        if (request.type === 'UPDATE_HIGHLIGHTS' && Array.isArray(request.units)) {
+            // Merge incoming units into cache, overwriting duplicates by ID
+            const incomingIds = new Set(request.units.map((u: any) => u.id));
+            cachedUnits = [
+                ...cachedUnits.filter(u => !incomingIds.has(u.id)), 
+                ...request.units
+            ];
             renderHighlights();
         }
     });
@@ -50,15 +64,20 @@ const renderHighlights = () => {
     // 2. Filter Units based on Mode
     const unitsToRender = cachedUnits.filter(unit => {
         if (currentMode === 'QA_MODE') {
-            // Only show Canonical Answers
             return unit.unit_type === 'canonical_answer';
         }
-        if (currentMode === 'CREATE_MODE') {
-            // Show everything EXCEPT canonical answers (or show all, depending on preference)
-            // Usually simpler to show generic content units here.
-            return unit.unit_type !== 'canonical_answer'; 
+        
+        // --- NEW: Handle Relationship Mode ---
+        if (currentMode === 'RELATIONS_MODE') {
+            return unit.unit_type === 'link_subject' || unit.unit_type === 'link_object';
         }
-        return false; // Hide highlights on other tabs for now
+
+        if (currentMode === 'CREATE_MODE') {
+            // Hide specialized types to reduce clutter in Create Mode
+            return !['canonical_answer', 'link_subject', 'link_object'].includes(unit.unit_type); 
+        }
+        
+        return false; 
     });
 
     // 3. Draw
