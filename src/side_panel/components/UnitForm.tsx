@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { PageMetadata, LogicalUnit } from '@/utils/types';
 import { useApi } from '@/hooks/useApi';
-import { TagInput } from './TagInput';
 
 interface Props {
   // Common
@@ -27,7 +26,7 @@ export const UnitForm: React.FC<Props> = ({
 }) => {
   const { post, del } = useApi();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Delete Confirmation State
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -37,8 +36,7 @@ export const UnitForm: React.FC<Props> = ({
 
   const [formData, setFormData] = useState({
     author: existingUnit?.author || "‘Abdu’l-Bahá",
-    unit_type: existingUnit?.unit_type || 'tablet',
-    tags: existingUnit?.tags || [] as (number | string)[]
+    unit_type: existingUnit?.unit_type || 'tablet'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,8 +45,6 @@ export const UnitForm: React.FC<Props> = ({
 
     try {
       // 1. Prepare Data
-      // If ViewMode: We MUST use the unit's stored context (from the GET fix above)
-      // If CreateMode: We use the active page context
       const payloadSourceCode = isViewMode ? (existingUnit as any).source_code : context?.source_code;
       const payloadPageId     = isViewMode ? (existingUnit as any).source_page_id : context?.source_page_id;
 
@@ -63,13 +59,11 @@ export const UnitForm: React.FC<Props> = ({
         start_char_index: isViewMode ? existingUnit!.start_char_index : offsets!.start,
         end_char_index: isViewMode ? existingUnit!.end_char_index : offsets!.end,
         author: formData.author,
-        unit_type: formData.unit_type,
-        tags: formData.tags
+        unit_type: formData.unit_type
       };
 
       if (isViewMode) {
           // --- UPDATE STRATEGY: CREATE NEW -> DELETE OLD ---
-          // This generates a new ID so the sync system picks it up.
           await post('/api/contribute/unit', payload);
           await del(`/api/units/${existingUnit!.id}`);
           alert("Unit Updated");
@@ -162,14 +156,6 @@ export const UnitForm: React.FC<Props> = ({
           <option value="talk">Talk</option>
           <option value="history">Historical Account</option>
         </select>
-      </div>
-
-      <div className="mb-4">
-        <TagInput 
-          selectedTags={formData.tags}
-          onChange={(tags) => setFormData({...formData, tags})}
-          disabled={!canEdit}
-        />
       </div>
 
       {/* 3. BUTTONS */}
