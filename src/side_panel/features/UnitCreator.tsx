@@ -1,4 +1,5 @@
 import React from 'react';
+import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { useSelection } from '@/side_panel/context/SelectionContext';
 import { UnitForm } from '@/side_panel/components/UnitForm';
 
