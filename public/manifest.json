@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Bahá’í RAG Librarian",
+  "name": "Bahá’í Text Cataloger",
   "version": "1.0",
-  "description": "Overlay RAG knowledge graphs onto certain Bahá’í websites",
+  "description": "Overlay knowledge graphs onto Bahá’í documents",
   "permissions": [
     "cookies",
     "storage",
