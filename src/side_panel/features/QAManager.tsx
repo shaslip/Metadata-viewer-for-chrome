@@ -1,23 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelection } from '@/side_panel/context/SelectionContext';
 import { useApi } from '@/hooks/useApi';
 import { LogicalUnit, PageMetadata } from '@/utils/types';
 
-// Helper type for the answer (Existing Unit or Raw Text)
 type StagedAnswer = 
   | { type: 'existing', unit: LogicalUnit }
   | { type: 'new', text: string, offsets: { start: number, end: number }, context: PageMetadata };
 
 export const QAManager = () => {
   const { currentSelection, selectedUnit, clearSelection } = useSelection();
-  const { post } = useApi();
+  const { post, get } = useApi(); // Ensure 'get' is available in your hook
 
   const [questionText, setQuestionText] = useState('');
   const [author, setAuthor] = useState("‘Abdu’l-Bahá");
   const [answer, setAnswer] = useState<StagedAnswer | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Capture current selection as the Answer
+  // --- NEW: Auto-select existing QA pair on click ---
+  useEffect(() => {
+    const loadExistingQA = async () => {
+      if (selectedUnit && selectedUnit.unit_type === 'canonical_answer') {
+        // 1. Set the visual answer
+        setAnswer({ type: 'existing', unit: selectedUnit });
+        
+        // 2. Try to fetch the question text (Optional: Requires API support)
+        // If you don't have this endpoint yet, user will have to re-type the question
+        // or you can store the question text in the logical_unit metadata temporarily.
+        try {
+           const res = await get(`/api/qa/by-unit/${selectedUnit.id}`);
+           if (res && res.question_text) {
+               setQuestionText(res.question_text);
+           }
+        } catch(e) {
+           console.log("No existing question found or API error");
+        }
+      }
+    };
+    loadExistingQA();
+  }, [selectedUnit]);
+  // --------------------------------------------------
+
   const handleSetAnswer = () => {
     if (selectedUnit) {
       setAnswer({ type: 'existing', unit: selectedUnit });
@@ -28,11 +50,9 @@ export const QAManager = () => {
     }
   };
 
-  // Helper: Allow highlighting text to auto-fill the Question input
   const handleSetQuestionFromText = () => {
     if (currentSelection) setQuestionText(currentSelection.text);
     else if (selectedUnit) setQuestionText(selectedUnit.text_content);
-    // Note: We do NOT clear selection here, in case they want to use the same text for the Answer
   };
 
   const handleSubmit = async () => {
@@ -40,10 +60,12 @@ export const QAManager = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Resolve Answer ID (Create Unit if it's raw text)
       let answerUnitId = answer.type === 'existing' ? answer.unit.id : null;
 
       if (!answerUnitId && answer.type === 'new') {
+        // If updating an existing QA, we might want to DELETE the old unit here?
+        // But per your requirements, we are creating new IDs for RAG safety.
+        
         const res = await post('/api/contribute/unit', {
           source_code: answer.context.source_code,
           source_page_id: answer.context.source_page_id,
@@ -53,11 +75,9 @@ export const QAManager = () => {
           author: author,
           unit_type: "canonical_answer"
         });
-        // FIX: Used 'unit_id' to match API response
         answerUnitId = res.unit_id;
       }
 
-      // 2. Create Canonical Question
       await post('/api/contribute/qa', {
         question_text: questionText,
         answer_unit_id: answerUnitId,
@@ -67,6 +87,7 @@ export const QAManager = () => {
       alert("Q&A Pair Saved!");
       setQuestionText('');
       setAnswer(null);
+      clearSelection();
       chrome.tabs.reload(); 
 
     } catch (e: any) {
