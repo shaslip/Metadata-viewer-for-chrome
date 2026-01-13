@@ -5,6 +5,8 @@ interface SelectionState {
   text: string;
   offsets: { start: number; end: number };
   context: PageMetadata;
+  viewMode: 'mine' | 'all';
+  setViewMode: (mode: 'mine' | 'all') => void;
 }
 
 interface SelectionContextType {
@@ -21,6 +23,7 @@ const SelectionContext = createContext<SelectionContextType | undefined>(undefin
 export const SelectionProvider = ({ children }: { children: ReactNode }) => {
   const [currentSelection, setCurrentSelection] = useState<SelectionState | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<(LogicalUnit & { can_delete?: boolean }) | null>(null);
+  const [viewMode, setViewModeState] = useState<'mine' | 'all'>('mine');
 
   useEffect(() => {
     const handleMessage = (request: any) => {
@@ -54,6 +57,11 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
   const clearSelection = () => {
     setCurrentSelection(null);
     setSelectedUnit(null);
+  };
+
+  const setViewMode = (mode: 'mine' | 'all') => {
+    setViewModeState(mode);
+    chrome.storage.local.set({ viewMode: mode });
   };
 
   return (
