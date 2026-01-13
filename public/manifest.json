@@ -32,6 +32,6 @@
     "default_path": "side_panel.html"
   },
   "action": {
-    "default_title": "Open RAG Librarian"
+    "default_title": "Open text catalog"
   }
 }
