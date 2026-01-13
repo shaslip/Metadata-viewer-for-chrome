@@ -122,39 +122,36 @@ export const QAManager = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Calculate Source Book from Client Context (URL/Title)
       const bookTitle = await deriveBookTitle();
 
-      // 2. If Updating: Delete OLD unit to reset ID
       if (answer.type === 'existing') {
         await del(`/api/units/${answer.unit.id}`);
       }
 
-      // 3. Prepare Data
-      // For existing units, we trust the CURRENT page context for source_code/id 
-      // because the unit is highlighted on the page we are looking at.
-      const context = answer.type === 'existing' 
-        ? answer.context || (await getPageContextFromTab()) // Fallback if context missing
-        : answer.context;
-
-      const textToSave = answer.type === 'existing' ? answer.unit.text_content : answer.text;
-      
-      const offsets = answer.type === 'existing' 
-        ? { start: answer.unit.start_char_index, end: answer.unit.end_char_index }
-        : answer.offsets;
+      // --- CLEANER APPROACH ---
+      // Construct the common payload object in one go
+      const unitPayload = answer.type === 'existing' ? {
+          source_code: answer.unit.source_code,
+          source_page_id: answer.unit.source_page_id,
+          text_content: answer.unit.text_content,
+          start_char_index: answer.unit.start_char_index,
+          end_char_index: answer.unit.end_char_index,
+      } : {
+          source_code: answer.context.source_code,
+          source_page_id: answer.context.source_page_id,
+          text_content: answer.text,
+          start_char_index: answer.offsets.start,
+          end_char_index: answer.offsets.end,
+      };
 
       // 4. Create NEW Unit
       const unitRes = await post('/api/contribute/unit', {
-        source_code: context.source_code,
-        source_page_id: context.source_page_id,
-        text_content: textToSave,
-        start_char_index: offsets.start,
-        end_char_index: offsets.end,
+        ...unitPayload, // Spread the object we just made
         author: author,
         unit_type: "canonical_answer"
       });
 
-      // 5. Create NEW Question (Using Client-Derived Book Title)
+      // 5. Create NEW Question 
       await post('/api/contribute/qa', {
         question_text: questionText,
         answer_unit_id: unitRes.unit_id,
