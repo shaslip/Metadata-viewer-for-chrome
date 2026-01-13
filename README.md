@@ -1,41 +1,53 @@
 ```
 metadata-viewer/
 ├── public/
-│   ├── manifest.json              # Extension config (Points to src/ for scripts per build)
-│   ├── side_panel.html            # HTML Entry for the React App
-│   └── icons/                     # (Optional) Extension icons
+│   ├── manifest.json              
+│   ├── side_panel.html            
+│   └── icons/                     
 │
 ├── src/
 │   ├── background/
-│   │   └── service_worker.ts      # Auth: Mediates Bot Password handshake & stores JWT
+│   │   └── service_worker.ts      # Handles SidePanel toggling & Cross-tab Navigation
 │   │
 │   ├── content/
-│   │   ├── index.ts               # Content Script Entry: Bridges DOM events to Side Panel
-│   │   ├── scraper.ts             # Metadata: Extracts MediaWiki Article ID & Rev ID from HTML
-│   │   ├── highlighter.ts         # View: Logic for rendering DB units as DOM highlights
-│   │   └── selection_handler.ts   # Interaction: Captured text & DOM Range data
+│   │   ├── index.ts               # Content Script Entry
+│   │   ├── scraper.ts             # Metadata extraction
+│   │   ├── highlighter.ts         # Visual rendering of units
+│   │   └── selection_handler.ts   # DOM Event listeners (MouseUp/KeyUp)
 │   │
-│   ├── side_panel/                # React Sidebar UI
-│   │   ├── index.tsx              # React Entry Point
-│   │   ├── App.tsx                # Main Router: Switches between AuthGate & UnitForm
-│   │   └── components/
-│   │       ├── AuthGate.tsx       # UI for MediaWiki Bot Password Login
-│   │       ├── UnitForm.tsx       # Contribution form (Author, Unit Type, Text Preview)
-│   │       └── TagInput.tsx       # Autocomplete tagging with "Create on the Fly" logic
+│   ├── side_panel/                
+│   │   ├── index.tsx              # React Entry + Router Wrapper
+│   │   ├── App.tsx                # Main Auth Check & Routes
+│   │   │
+│   │   ├── components/
+│   │   │   ├── AuthGate.tsx       # Login Screen
+│   │   │   ├── UnitForm.tsx       # Reusable Form (Shared by UnitCreator)
+│   │   │   ├── TagInput.tsx       # Autocomplete Component
+│   │   │   └── Layout/
+│   │   │       └── MainLayout.tsx # Fixed Bottom Navigation Bar
+│   │   │
+│   │   ├── features/
+│   │   │   ├── UnitCreator.tsx       # Tab 1: Create/Edit basic Units
+│   │   │   ├── RelationshipManager.tsx # Tab 2: Connect Subject -> Object
+│   │   │   ├── QAManager.tsx         # Tab 3: Create Question & Answer pairs
+│   │   │   └── TaxonomyExplorer.tsx  # Tab 4: Recursive Tree & Filtering
+│   │   │
+│   │   └── context/
+│   │       └── SelectionContext.tsx  # Global State (Persists across tabs)
 │   │
 │   ├── hooks/
-│   │   └── useApi.ts              # Custom Hook: Axios wrapper for JWT-authenticated requests
+│   │   └── useApi.ts              # Fetch wrapper with JWT handling
 │   │
 │   ├── utils/
-│   │   ├── offset_calculator.ts   # Logic for converting DOM ranges to database indices
-│   │   └── types.ts               # Shared TypeScript Interfaces (Unit, Metadata, etc.)
+│   │   ├── offset_calculator.ts   # Range <-> Index logic
+│   │   └── types.ts               # Shared Interfaces (StagedItem, TreeNode, etc.)
 │   │
 │   └── styles/
-│       ├── highlights.css         # CSS for injecting highlights into the Wiki body
-│       └── side_panel.css         # Tailwind & custom styles for the sidebar
+│       ├── highlights.css         
+│       └── side_panel.css         
 │
-├── vite.config.ts                 # Build config for Chrome Extension output
-├── tailwind.config.js             # UI styling configuration
-├── tsconfig.json                  # TypeScript project settings
-└── package.json                   # Dependencies & build scripts
+├── vite.config.ts                 
+├── tailwind.config.js             
+├── tsconfig.json                  
+└── package.json
 ```
