@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthGate } from './components/AuthGate';
 import { MainLayout } from './components/Layout/MainLayout';
-import { UnitCreator } from './features/UnitCreator';
+import { Label } from './features/Label';
 import { RelationshipManager } from './features/RelationshipManager';
 import { QAManager } from './features/QAManager';
 import { TaxonomyExplorer } from './features/TaxonomyExplorer';
@@ -25,7 +25,7 @@ export default function App() {
     <SelectionProvider>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<UnitCreator />} />
+          <Route index element={<Label />} />
           <Route path="relations" element={<RelationshipManager />} />
           <Route path="qa" element={<QAManager />} />
           <Route path="taxonomy" element={<TaxonomyExplorer />} />
