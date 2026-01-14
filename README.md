@@ -7,40 +7,41 @@ metadata-viewer/
 │
 ├── src/
 │   ├── background/
-│   │   └── service_worker.ts      # Handles SidePanel toggling & Cross-tab Navigation
+│   │   └── service_worker.ts      # Handles SidePanel toggling, Nav, and REFRESH_HIGHLIGHTS
 │   │
 │   ├── content/
-│   │   ├── index.ts               # Content Script Entry
-│   │   ├── scraper.ts             # Metadata extraction
-│   │   ├── highlighter.ts         # Visual rendering of units
-│   │   └── selection_handler.ts   # DOM Event listeners (MouseUp/KeyUp)
+│   │   ├── index.ts               
+│   │   ├── scraper.ts             
+│   │   ├── highlighter.ts         # Visual rendering (TAXONOMY_MODE, CREATE_MODE, etc.)
+│   │   └── selection_handler.ts   
 │   │
 │   ├── side_panel/                
-│   │   ├── index.tsx              # React Entry + Router Wrapper
-│   │   ├── App.tsx                # Main Auth Check & Routes
+│   │   ├── index.tsx              
+│   │   ├── App.tsx                # Routing: Default ("/") is now Tags
 │   │   │
 │   │   ├── components/
-│   │   │   ├── AuthGate.tsx       # Login Screen
-│   │   │   ├── UnitForm.tsx       # Reusable Form (Shared by UnitCreator)
-│   │   │   ├── TagInput.tsx       # Autocomplete Component
+│   │   │   ├── AuthGate.tsx       
+│   │   │   ├── UnitForm.tsx       # Metadata Form (Author/Type) for Label tab
+│   │   │   ├── TagInput.tsx       # Personal tag search/creation logic
 │   │   │   └── Layout/
-│   │   │       └── MainLayout.tsx # Fixed Bottom Navigation Bar
+│   │   │       └── MainLayout.tsx # Nav order: Tags -> Label -> Q&A -> Link
 │   │   │
 │   │   ├── features/
-│   │   │   ├── UnitCreator.tsx       # Tab 1: Create/Edit basic Units
-│   │   │   ├── RelationshipManager.tsx # Tab 2: Connect Subject -> Object
-│   │   │   ├── QAManager.tsx         # Tab 3: Create Question & Answer pairs
-│   │   │   └── TaxonomyExplorer.tsx  # Tab 4: Recursive Tree & Filtering
+│   │   │   ├── Tags.tsx              # Tab 1 (Default): Unified Tree + Personal tagging
+│   │   │   ├── Label.tsx             # Tab 2 (Formerly UnitCreator): Official metadata
+│   │   │   ├── QAManager.tsx         # Tab 3: Question & Answer pairs
+│   │   │   ├── RelationshipManager.tsx # Tab 4: Knowledge Graph connections
+│   │   │   └── TaxonomyExplorer.tsx  # Recursive Tree view (used inside Tags.tsx)
 │   │   │
 │   │   └── context/
-│   │       └── SelectionContext.tsx  # Global State (Persists across tabs)
+│   │       └── SelectionContext.tsx  # Added viewMode (mine/all) global state
 │   │
 │   ├── hooks/
-│   │   └── useApi.ts              # Fetch wrapper with JWT handling
+│   │   └── useApi.ts              
 │   │
 │   ├── utils/
-│   │   ├── offset_calculator.ts   # Range <-> Index logic
-│   │   └── types.ts               # Shared Interfaces (StagedItem, TreeNode, etc.)
+│   │   ├── offset_calculator.ts   
+│   │   └── types.ts               # Added is_official to DefinedTag interface
 │   │
 │   └── styles/
 │       ├── highlights.css         
