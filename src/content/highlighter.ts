@@ -4,7 +4,7 @@ import { LogicalUnit } from '@/utils/types';
 
 // --- Global State for Highlighter ---
 let cachedUnits: LogicalUnit[] = [];
-let currentMode: string = 'CREATE_MODE'; 
+let currentMode: string = 'TAXONOMY_MODE';
 
 export const initHighlighter = async () => {
     const meta = getPageMetadata();
@@ -15,17 +15,22 @@ export const initHighlighter = async () => {
         currentMode = storageResult.highlightMode;
     }
     
-    // 2. Fetch Initial Page Data (Standard Units)
-    const response = await chrome.runtime.sendMessage({
-        type: 'FETCH_PAGE_DATA',
-        source_code: meta.source_code,
-        source_page_id: meta.source_page_id
-    });
+    // Helper to run the fetch (Used by Init + Reload Trigger)
+    const fetchAndRender = async () => {
+        const response = await chrome.runtime.sendMessage({
+            type: 'FETCH_PAGE_DATA',
+            source_code: meta.source_code,
+            source_page_id: meta.source_page_id
+        });
 
-    if (response && response.units) {
-        cachedUnits = response.units;
-        renderHighlights(); 
-    }
+        if (response && response.units) {
+            cachedUnits = response.units;
+            renderHighlights(); 
+        }
+    };
+
+    // 2. Initial Fetch
+    await fetchAndRender();
 
     // 3. Listen to Storage changes (Tab Switching)
     chrome.storage.onChanged.addListener((changes, area) => {
@@ -48,6 +53,11 @@ export const initHighlighter = async () => {
             ];
             renderHighlights();
         }
+
+        // --- Handle Data Reload (Triggered by Save) ---
+        if (request.type === 'TRIGGER_DATA_RELOAD') {
+            fetchAndRender();
+        }
     });
 };
 
@@ -63,18 +73,21 @@ const renderHighlights = () => {
 
     // 2. Filter Units based on Mode
     const unitsToRender = cachedUnits.filter(unit => {
+        // --- NEW: Tags View ---
+        if (currentMode === 'TAXONOMY_MODE') {
+             return unit.unit_type === 'user_highlight';
+        }
+
         if (currentMode === 'QA_MODE') {
             return unit.unit_type === 'canonical_answer';
         }
         
-        // --- NEW: Handle Relationship Mode ---
         if (currentMode === 'RELATIONS_MODE') {
             return unit.unit_type === 'link_subject' || unit.unit_type === 'link_object';
         }
 
         if (currentMode === 'CREATE_MODE') {
-            // Hide specialized types to reduce clutter in Create Mode
-            return !['canonical_answer', 'link_subject', 'link_object'].includes(unit.unit_type); 
+            return !['canonical_answer', 'link_subject', 'link_object', 'user_highlight'].includes(unit.unit_type); 
         }
         
         return false; 
