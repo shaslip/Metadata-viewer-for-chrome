@@ -18,6 +18,7 @@ export interface PageMetadata {
   source_page_id: number; 
   latest_rev_id: number;
   title: string;
+  author?: string;
   url: string;
 }
 
