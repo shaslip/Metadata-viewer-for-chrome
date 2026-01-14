@@ -374,7 +374,7 @@ export const Tags = () => {
                                {isAutoDetected ? (
                                    // A. Auto-Detected: Minimalist
                                    <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                       Author: <span className="text-slate-800 normal-case">{author}</span>
+                                       Author: {author}
                                    </div>
                                ) : (
                                    // B. Manual Selection
