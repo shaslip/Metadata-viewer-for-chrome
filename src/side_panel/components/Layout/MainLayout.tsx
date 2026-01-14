@@ -10,15 +10,15 @@ export const MainLayout = () => {
   useEffect(() => {
     const getMode = (path: string) => {
       switch (path) {
+        case '/': return 'TAXONOMY_MODE';
+        case '/label': return 'CREATE_MODE';
         case '/qa': return 'QA_MODE';
         case '/relations': return 'RELATIONS_MODE';
-        case '/taxonomy': return 'TAXONOMY_MODE';
-        default: return 'CREATE_MODE';
+        default: return 'TAXONOMY_MODE';
       }
     };
 
     const mode = getMode(location.pathname);
-    
     chrome.storage.local.set({ highlightMode: mode });
 
   }, [location.pathname]);
@@ -36,12 +36,12 @@ export const MainLayout = () => {
 
       <div className="fixed bottom-0 w-full h-14 bg-white border-t border-slate-200 flex justify-around items-center shadow-lg z-50">
 
-        <button onClick={() => navigate('/taxonomy')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/taxonomy')}`}>
+        <button onClick={() => navigate('/')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/')}`}>
           <TagIcon className="h-6 w-6" />
           <span className="text-[10px] font-medium">Tags</span>
         </button>
 
-        <button onClick={() => navigate('/')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/')}`}>
+        <button onClick={() => navigate('/label')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/label')}`}>
           <PencilSquareIcon className="h-6 w-6" />
           <span className="text-[10px] font-medium">Label</span>
         </button>
