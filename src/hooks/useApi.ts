@@ -34,7 +34,7 @@ export const useApi = () => {
     get: (url: string) => request(url, 'GET'),
     post: (url: string, data: any) => request(url, 'POST', data),
     put: (url: string, data: any) => request(url, 'PUT', data),
-    del: (url: string) => request(url, 'DELETE'),
+    del: (url: string, data?: any) => request(url, 'DELETE', data),
     error
   };
 };
