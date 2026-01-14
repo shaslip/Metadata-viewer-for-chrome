@@ -11,7 +11,6 @@ import {
     useDroppable, 
     DragEndEvent,
     DragOverlay,
-    defaultDropAnimationSideEffects,
     DragStartEvent
 } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -39,8 +38,8 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     onTagSelect, isSelectionMode, isEditMode, onTreeChange, onDeleteTag 
 }) => {
   const { get } = useApi();
-  const [tree, setTree] = useState<TreeNode[]>([]); // Source of truth from API
-  const [localTree, setLocalTree] = useState<TreeNode[]>([]); // Local state for DnD
+  const [tree, setTree] = useState<TreeNode[]>([]);
+  const [localTree, setLocalTree] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<number>>(new Set());
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
@@ -95,7 +94,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     const activeId = active.id as number;
     const overId = over.id as number;
 
-    // Helper to recursively remove a node
     const removeNode = (nodes: TreeNode[], id: number): { cleaned: TreeNode[], movedNode: TreeNode | null } => {
         let movedNode: TreeNode | null = null;
         const cleaned = nodes.reduce((acc, node) => {
@@ -113,7 +111,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
         return { cleaned, movedNode };
     };
 
-    // Helper to recursively insert a node
     const insertNode = (nodes: TreeNode[], targetId: number, nodeToInsert: TreeNode): TreeNode[] => {
         return nodes.map(node => {
             if (node.id === targetId) {
@@ -129,26 +126,23 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     const { cleaned, movedNode } = removeNode(localTree, activeId);
     
     if (movedNode) {
-        // If overId is special root marker (optional) or just another tag. 
-        // Note: Currently logic only supports nesting inside another tag.
-        // To support "making root", we'd need a drop zone outside nodes.
         const newTree = insertNode(cleaned, overId, movedNode);
         setLocalTree(newTree);
         onTreeChange([{ id: activeId, parent_id: overId }]);
     }
   };
 
-  // 4. Recursive Filter & Render Preparation
+  // 4. Recursive Processing
   const processNodes = (nodes: TreeNode[]): TreeNode[] => {
     return nodes.map(node => {
-        // Filter Text
         const matchesText = node.label.toLowerCase().includes(filter.toLowerCase());
-        
         const processedChildren = processNodes(node.children || []);
         
+        // If text matches OR children match OR it is manually expanded
+        const isExpandedInState = expandedNodeIds.has(node.id);
+        const shouldExpand = (!!filter && processedChildren.length > 0) || isExpandedInState;
+
         if (matchesText || processedChildren.length > 0) {
-            // Force expand if filtering or manually expanded
-            const shouldExpand = (!!filter && processedChildren.length > 0) || expandedNodeIds.has(node.id);
             return { ...node, children: processedChildren, forceExpand: shouldExpand };
         }
         return null;
@@ -157,8 +151,8 @@ export const TaxonomyExplorer: React.FC<Props> = ({
 
   const displayTree = useMemo(() => processNodes(localTree), [localTree, filter, expandedNodeIds]);
 
-  // Handle manual toggle from child components
-  const toggleExpand = (id: number) => {
+  // 5. Toggle Handler (Passed Down)
+  const handleToggleExpand = (id: number) => {
       const newSet = new Set(expandedNodeIds);
       if (newSet.has(id)) newSet.delete(id);
       else newSet.add(id);
@@ -181,13 +175,13 @@ export const TaxonomyExplorer: React.FC<Props> = ({
                refreshKey={refreshKey}
                onTagSelect={onTagSelect}
                isSelectionMode={isSelectionMode}
+               // Pass State & Handler
                isExpanded={node.forceExpand || false}
-               onToggleExpand={() => toggleExpand(node.id)}
+               onToggleExpand={handleToggleExpand}
              />
            ))}
         </div>
         
-        {/* Drag Overlay for Visual Feedback */}
         <DragOverlay>
             {activeDragId ? (
                 <div className="bg-white border border-blue-500 p-2 rounded shadow-lg opacity-90 text-sm font-bold text-blue-800">
@@ -205,7 +199,6 @@ const TaxonomyNode = ({
     const { get } = useApi();
     const [units, setUnits] = useState<LogicalUnit[]>([]);
 
-    // DnD Hooks
     const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
         id: node.id,
         disabled: !isEditMode || !!node.is_official
@@ -216,7 +209,6 @@ const TaxonomyNode = ({
         disabled: !isEditMode
     });
 
-    // Lazy Load Units
     useEffect(() => {
         if (isExpanded && units.length === 0) {
              get(`/api/units?tag_id=${node.id}&limit=10`).then(setUnits).catch(() => {});
@@ -231,42 +223,33 @@ const TaxonomyNode = ({
 
     const handleLabelClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (isEditMode) return; // Do nothing on click in edit mode, use handles
+        if (isEditMode) return; 
         if (isSelectionMode) {
             onTagSelect(node);
         } else {
-            onToggleExpand();
+            onToggleExpand(node.id);
         }
     };
 
     return (
-        <div 
-            ref={setDropRef}
-            className={`ml-3 border-l border-slate-200 pl-2 transition-colors ${isOver ? 'bg-blue-50 rounded-l border-blue-300' : ''}`}
-        >
-            <div 
-                ref={setDragRef} 
-                style={style}
-                className={`flex items-center py-1 rounded text-sm select-none group ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm' : ''}`}
-            >
-                {/* Drag Handle */}
+        <div ref={setDropRef} className={`ml-3 border-l border-slate-200 pl-2 transition-colors ${isOver ? 'bg-blue-50 rounded-l border-blue-300' : ''}`}>
+            <div ref={setDragRef} style={style} className={`flex items-center py-1 rounded text-sm select-none group ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm' : ''}`}>
+                
                 {isEditMode && !node.is_official && (
                     <div {...listeners} {...attributes} className="mr-1 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 p-1">
                         <Bars2Icon className="w-4 h-4" />
                     </div>
                 )}
 
-                {/* Arrow */}
                 <div 
                     className="mr-1 text-slate-400 cursor-pointer p-0.5 hover:text-slate-700 hover:bg-slate-200 rounded"
-                    onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+                    onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }}
                 >
                      {node.children.length > 0 || (isExpanded && units.length > 0) ? (
                          isExpanded ? <ChevronDownIcon className="h-3 w-3" /> : <ChevronRightIcon className="h-3 w-3" />
                      ) : <span className="w-3 h-3 block"></span>}
                 </div>
 
-                {/* Label */}
                 <div 
                     className={`flex items-center flex-1 cursor-pointer hover:bg-slate-100 px-1 rounded ${
                         isSelectionMode && !isEditMode ? 'hover:text-blue-600 hover:font-semibold' : 'text-slate-700'
@@ -280,7 +263,6 @@ const TaxonomyNode = ({
                     <span>{node.label}</span>
                 </div>
 
-                {/* Delete Button */}
                 {isEditMode && !node.is_official && (
                     <button 
                         onClick={(e) => { e.stopPropagation(); onDeleteTag(node, node.children.length > 0); }}
@@ -291,7 +273,6 @@ const TaxonomyNode = ({
                 )}
             </div>
 
-            {/* Recursion & Units */}
             {isExpanded && !isDragging && (
                 <div>
                     {node.children.map((child: any) => (
@@ -304,16 +285,13 @@ const TaxonomyNode = ({
                             refreshKey={refreshKey}
                             onTagSelect={onTagSelect}
                             isSelectionMode={isSelectionMode}
+                            // Recursive Props
                             isExpanded={child.forceExpand || false}
-                            onToggleExpand={() => child.onToggleExpand ? child.onToggleExpand() : null} 
-                            // Note: onToggleExpand needs to be passed down via props in the real recursion.
-                            // However, since we define toggleExpand in parent, we need to pass the toggle function properly.
-                            // FIX: The recursive call below must pass the parent's toggle handler wrapper or similar.
-                            // Actually, simpler: Pass the logic down via Props recursion.
+                            onToggleExpand={onToggleExpand} 
                         />
                     ))}
                     
-                    {units.map(u => {
+                    {units.map((u: LogicalUnit) => {
                         const isActive = highlightUnitId === u.id;
                         return (
                             <div 
