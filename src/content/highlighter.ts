@@ -147,14 +147,19 @@ const attemptScroll = (attempts = 10) => {
         setTimeout(() => {
             (el as HTMLElement).style.backgroundColor = originalBg;
             setTimeout(() => {
-                 (el as HTMLElement).style.transition = originalTransition;
+                (el as HTMLElement).style.transition = originalTransition;
             }, 500);
         }, 1500);
 
         pendingScrollId = null; // Clear queue
     } else if (attempts > 0) {
         // NOT FOUND YET: Retry in 250ms
+        // IMPORTANT: No console.error here. We expect this to fail a few times.
         setTimeout(() => attemptScroll(attempts - 1), 250);
+    } else {
+        // ONLY log if we have run out of attempts (e.g. after ~2.5 seconds)
+        console.warn(`Unit ${pendingScrollId} not found in DOM after retries.`);
+        pendingScrollId = null;
     }
 };
 
