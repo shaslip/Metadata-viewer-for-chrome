@@ -138,12 +138,13 @@ const TaxonomyNode = ({ node }: { node: TreeNode & { forceExpand?: boolean } }) 
   };
   
   const handleUnitClick = (unit: LogicalUnit) => {
+    if (!unit.title) console.warn("Unit missing title:", unit);
     // Send message to background to navigate/scroll
     chrome.runtime.sendMessage({
       type: 'NAVIGATE_TO_UNIT',
       source_code: unit.source_code,
       source_page_id: unit.source_page_id,
-      title: unit['title'],
+      title: unit.title,
       unit_id: unit.id
     });
   };
