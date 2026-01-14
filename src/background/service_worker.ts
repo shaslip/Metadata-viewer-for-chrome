@@ -65,8 +65,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // MediaWiki standard URL pattern
         let targetUrl = `${baseUrl}/index.php?curid=${source_page_id}`;
         if (title) {
-            const safeTitle = title.replace(/ /g, '_'); 
-            targetUrl = `${baseUrl}/${encodeURIComponent(safeTitle)}`;
+            const safeTitle = title.replace(/ /g, '_');
+            const prettyTitle = encodeURIComponent(safeTitle).replace(/%2F/g, '/');
+            targetUrl = `${baseUrl}/${prettyTitle}`;
         } else {
             console.warn(`[Nav] Title missing for PageID ${source_page_id}. Falling back to curid.`);
         }
