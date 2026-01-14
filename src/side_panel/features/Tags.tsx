@@ -22,6 +22,7 @@ export const Tags = () => {
   
   // Editor State
   const [editingUnit, setEditingUnit] = useState<LogicalUnit | null>(null);
+  const [editingTag, setEditingTag] = useState<DefinedTag | null>(null); // [NEW] Renaming state
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]); 
   const [isSaving, setIsSaving] = useState(false);
   const [revealUnitId, setRevealUnitId] = useState<number | null>(null);
@@ -32,10 +33,10 @@ export const Tags = () => {
     const listener = (msg: any) => {
       if (msg.type === 'UNIT_CLICKED' && msg.unit) {
         clearSelection();
+        setEditingTag(null);
         setEditingUnit(msg.unit);
         setRevealUnitId(msg.unit.id);
         
-        // Fetch existing tags (API returns [{id, label...}])
         get(`/api/units/${msg.unit.id}/tags`).then((tags: Tag[]) => {
             setSelectedTags(tags); 
         });
@@ -49,7 +50,8 @@ export const Tags = () => {
   useEffect(() => {
     if (currentSelection) {
       setEditingUnit(null); 
-      setSelectedTags([]); // Reset
+      setEditingTag(null);
+      setSelectedTags([]); 
     }
   }, [currentSelection]);
 
@@ -71,7 +73,7 @@ export const Tags = () => {
         end_char_index: currentSelection.offsets.end,
         unit_type: 'user_highlight',
         author: 'Undefined',
-        tags: selectedTags.map(t => t.id) // Extract IDs for API
+        tags: selectedTags.map(t => t.id) 
       });
       triggerRefresh();
       clearSelection();
@@ -88,7 +90,7 @@ export const Tags = () => {
     setIsSaving(true);
     try {
         await put(`/api/units/${editingUnit.id}/tags`, { 
-            tags: selectedTags.map(t => t.id) // Extract IDs for API
+            tags: selectedTags.map(t => t.id) 
         });
         triggerRefresh();
         setEditingUnit(null);
@@ -111,19 +113,32 @@ export const Tags = () => {
     }
   };
 
-  // [NEW] Batch Save Taxonomy
+  // [NEW] Handle Rename Tag
+  const handleRename = async () => {
+      if (!editingTag || !editingTag.label.trim()) return;
+      setIsSaving(true);
+      try {
+          await put(`/api/tags/${editingTag.id}`, { label: editingTag.label });
+          setEditingTag(null);
+          setRefreshKey(prev => prev + 1);
+      } catch (e: any) {
+          alert(e.message || "Failed to rename");
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
   const handleSaveTree = async () => {
     if (treeChanges.length === 0) {
         setIsEditMode(false);
         return;
     }
-    
     setIsSaving(true);
     try {
         await put('/api/tags/hierarchy', { updates: treeChanges });
-        setTreeChanges([]); // Clear buffer
+        setTreeChanges([]); 
         setIsEditMode(false);
-        setRefreshKey(prev => prev + 1); // Reload tree
+        setRefreshKey(prev => prev + 1); 
     } catch (e) {
         alert("Failed to save hierarchy changes.");
     } finally {
@@ -131,34 +146,12 @@ export const Tags = () => {
     }
   };
 
-  // [NEW] Delete Tag Logic
   const handleTagDeleteRequest = async (tag: DefinedTag, hasChildren: boolean) => {
     if (hasChildren) {
         alert("You must delete or move all child tags before you can delete this one.");
         return;
     }
 
-    // Ask about snippets
-    // We strictly use confirm/prompt here for simplicity, ideally a Modal component
-    const choice = confirm(
-        `Delete tag "${tag.label}"?\n\n` + 
-        `Click OK to delete snippets attached to this tag as well.\n` + 
-        `Click Cancel to move snippets to 'Uncategorized'.`
-    );
-    
-    // Note: The prompt logic in browser `confirm` is binary. 
-    // To strictly match your requirement "Yes | No" where No = Move:
-    // We might need a custom modal. For now, let's assume `confirm` = Delete All, 
-    // and we create a specific behavior.
-    // actually, let's make it clearer:
-    
-    // Simulating the logic with window.confirm isn't great for "Yes/No = Do A/Do B".
-    // Implementing a quick custom flow:
-    
-    /* Since I cannot inject a Modal component code without rewriting your Layout, 
-       I will use a two-step native alert flow.
-    */
-    
     const shouldDelete = confirm(`Are you sure you want to delete "${tag.label}"?`);
     if (!shouldDelete) return;
 
@@ -169,21 +162,17 @@ export const Tags = () => {
     );
 
     try {
-        await del(`/api/tags/${tag.id}`, { 
-             data: { move_units_to_uncategorized: moveUnits } // Pass via body 
-        });
+        await del(`/api/tags/${tag.id}`, { move_units_to_uncategorized: moveUnits });
         setRefreshKey(prev => prev + 1);
+        if (editingTag?.id === tag.id) setEditingTag(null);
     } catch (e: any) {
         alert(e.message || "Could not delete tag");
     }
   };
 
-  // [UPDATED] Handle Tag Clicks from Tree
   const handleTagClickFromTree = (tag: DefinedTag) => {
-    if (isEditorVisible) {
-        // Check for duplicates by ID
+    if (isEditorVisible && !editingTag) { // Only add if we are in Snippet Editor mode
         if (!selectedTags.some(t => t.id === tag.id)) {
-            // Add the FULL object so TagInput can render the label
             setSelectedTags(prev => [...prev, { id: tag.id, label: tag.label }]);
         }
     }
@@ -192,16 +181,17 @@ export const Tags = () => {
   const closeBottomPane = () => {
     clearSelection();
     setEditingUnit(null);
+    setEditingTag(null); // [NEW]
   };
 
-  const isEditorVisible = !!currentSelection || !!editingUnit;
+  // [UPDATED] Visibility logic
+  const isEditorVisible = !!currentSelection || !!editingUnit || !!editingTag;
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
       
       {/* Header */}
       <div className="p-3 bg-white border-b border-slate-200 shadow-sm z-10 space-y-3">
-        {/* View Mode Toggles */}
         <div className="flex bg-slate-100 p-1 rounded-lg">
           <button
             onClick={() => setViewMode('mine')}
@@ -223,7 +213,6 @@ export const Tags = () => {
           </button>
         </div>
 
-        {/* Search & Edit Actions Row */}
         <div className="flex items-center gap-2">
             <div className="relative flex-1">
                 <MagnifyingGlassIcon className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
@@ -236,7 +225,6 @@ export const Tags = () => {
                 />
             </div>
 
-            {/* Edit Controls (Only visible in 'My Tags') */}
             {viewMode === 'mine' && (
                 !isEditMode ? (
                     <button 
@@ -277,19 +265,20 @@ export const Tags = () => {
             revealUnitId={revealUnitId}
             refreshKey={refreshKey}
             onTagSelect={handleTagClickFromTree}
-            isSelectionMode={isEditorVisible}
+            isSelectionMode={isEditorVisible && !editingTag} // Disable selecting tags for units if we are renaming a tag
             isEditMode={isEditMode}
             onTreeChange={setTreeChanges}
             onDeleteTag={handleTagDeleteRequest}
+            onEditTag={setEditingTag} // [NEW]
         />
       </div>
 
-      {/* Editor Pane */}
+      {/* Editor Pane (Dynamic Content) */}
       {isEditorVisible && (
         <div className="border-t-2 border-blue-500 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 flex flex-col max-h-[50%]">
            <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
               <span className="text-xs font-bold text-slate-500 uppercase">
-                {editingUnit ? "Edit Highlight" : "New Highlight"}
+                {editingTag ? "Rename Tag" : (editingUnit ? "Edit Highlight" : "New Highlight")}
               </span>
               <div className="flex gap-2">
                 {editingUnit && (
@@ -304,21 +293,51 @@ export const Tags = () => {
            </div>
 
            <div className="p-4 overflow-y-auto">
-              <blockquote className="text-xs text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-4 line-clamp-3">
-                  "{currentSelection ? currentSelection.text : editingUnit?.text_content}"
-              </blockquote>
-
-              <TagInput tags={selectedTags} onChange={setSelectedTags} />
               
-              <div className="mt-4 flex justify-end">
-                 <button 
-                    onClick={editingUnit ? handleUpdate : handleCreate}
-                    disabled={isSaving}
-                    className="bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded shadow hover:bg-blue-700 disabled:opacity-50"
-                 >
-                    {isSaving ? 'Saving...' : (editingUnit ? 'Update Tags' : 'Save')}
-                 </button>
-              </div>
+              {/* CONDITION: Renaming Tag */}
+              {editingTag ? (
+                  <div className="space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold text-slate-500 mb-1">Tag Name</label>
+                          <input 
+                              type="text" 
+                              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                              value={editingTag.label}
+                              onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
+                              autoFocus
+                              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+                          />
+                      </div>
+                      <div className="flex justify-end">
+                          <button 
+                             onClick={handleRename}
+                             disabled={isSaving || !editingTag.label.trim()}
+                             className="bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded shadow hover:bg-blue-700 disabled:opacity-50"
+                          >
+                             {isSaving ? 'Saving...' : 'Rename'}
+                          </button>
+                      </div>
+                  </div>
+              ) : (
+                  /* CONDITION: Editing Unit (Snippet) */
+                  <>
+                      <blockquote className="text-xs text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-4 line-clamp-3">
+                          "{currentSelection ? currentSelection.text : editingUnit?.text_content}"
+                      </blockquote>
+
+                      <TagInput tags={selectedTags} onChange={setSelectedTags} />
+                      
+                      <div className="mt-4 flex justify-end">
+                         <button 
+                            onClick={editingUnit ? handleUpdate : handleCreate}
+                            disabled={isSaving}
+                            className="bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded shadow hover:bg-blue-700 disabled:opacity-50"
+                         >
+                            {isSaving ? 'Saving...' : (editingUnit ? 'Update Tags' : 'Save')}
+                         </button>
+                      </div>
+                  </>
+              )}
            </div>
         </div>
       )}
