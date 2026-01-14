@@ -22,15 +22,18 @@ export const Tags = () => {
 
     try {
       const unitPayload = {
-        article_id: currentSelection.context.source_page_id,
+        source_code: currentSelection.context.source_code,
+        source_page_id: currentSelection.context.source_page_id,
         text_content: currentSelection.text,
         start_char_index: currentSelection.offsets.start,
         end_char_index: currentSelection.offsets.end,
-        unit_type: 'user_highlight', 
+        unit_type: 'user_highlight',
+        author: 'Undefined',
         tags: tagIds
       };
 
-      await post('/api/units', unitPayload);
+      await post('/api/contribute/unit', unitPayload);
+
       chrome.runtime.sendMessage({ type: 'REFRESH_HIGHLIGHTS' });
       clearSelection();
 
