@@ -24,6 +24,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true; 
     }
 
+    // --- Handle Refresh Trigger from Side Panel ---
+    if (request.type === 'REFRESH_HIGHLIGHTS') {
+        const targetTabId = sender.tab?.id || request.tabId;
+        if (targetTabId) {
+             chrome.tabs.sendMessage(targetTabId, { type: 'TRIGGER_DATA_RELOAD' });
+        } else {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]?.id) {
+                    chrome.tabs.sendMessage(tabs[0].id, { type: 'TRIGGER_DATA_RELOAD' });
+                }
+            });
+        }
+        return true;
+    }
+
     if (request.type === 'UNIT_CLICKED') {
         console.log("Unit clicked:", request.unit);
         
