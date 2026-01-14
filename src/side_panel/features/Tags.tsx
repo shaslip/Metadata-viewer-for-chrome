@@ -3,6 +3,7 @@ import { useSelection } from '@/side_panel/context/SelectionContext';
 import { TaxonomyExplorer } from './TaxonomyExplorer';
 import { TagInput } from '../components/TagInput';
 import { useApi } from '@/hooks/useApi';
+import { DefinedTag } from '@/utils/types';
 import { MagnifyingGlassIcon, UserIcon, BuildingLibraryIcon, TrashIcon } from '@heroicons/react/24/solid';
 import { LogicalUnit } from '@/utils/types';
 
@@ -18,6 +19,7 @@ export const Tags = () => {
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [revealUnitId, setRevealUnitId] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // 1. Listen for clicks on existing highlights (from Background/Highlighter)
   useEffect(() => {
@@ -46,8 +48,13 @@ export const Tags = () => {
     }
   }, [currentSelection]);
 
-  // --- ACTIONS ---
+  // Helper to trigger refreshes
+  const triggerRefresh = () => {
+      chrome.runtime.sendMessage({ type: 'REFRESH_HIGHLIGHTS' });
+      setRefreshKey(prev => prev + 1); // <--- Updates Tree
+  };
 
+    // --- ACTIONS ---
   const handleCreate = async () => {
     if (!currentSelection) return;
     setIsSaving(true);
@@ -64,6 +71,7 @@ export const Tags = () => {
         tags: tagIds
       });
       chrome.runtime.sendMessage({ type: 'REFRESH_HIGHLIGHTS' });
+      triggerRefresh();
       clearSelection();
     } catch (e) {
       console.error(e);
@@ -78,7 +86,8 @@ export const Tags = () => {
     setIsSaving(true);
     try {
         await put(`/api/units/${editingUnit.id}/tags`, { tags: tagIds });
-        chrome.runtime.sendMessage({ type: 'REFRESH_HIGHLIGHTS' });
+        chrome.runtime.sendMessage({ type: '' });
+        triggerRefresh();
         setEditingUnit(null); // Close editor
     } catch (e) {
         console.error(e);
@@ -93,9 +102,20 @@ export const Tags = () => {
     try {
         await del(`/api/units/${editingUnit.id}`);
         chrome.runtime.sendMessage({ type: 'REFRESH_HIGHLIGHTS' });
+        triggerRefresh();
         setEditingUnit(null);
     } catch (e) {
         alert("Could not delete. You may not be the owner.");
+    }
+  };
+
+  // Handle Tag Clicks from Tree
+  const handleTagClickFromTree = (tag: DefinedTag) => {
+    // Only attach tag if we are currently editing or creating (Editor Visible)
+    if (isEditorVisible) {
+        if (!tagIds.includes(tag.id)) {
+            setTagIds(prev => [...prev, tag.id]);
+        }
     }
   };
 
@@ -151,7 +171,10 @@ export const Tags = () => {
         <TaxonomyExplorer 
             filter={filterText} 
             viewMode={viewMode} 
-            revealUnitId={revealUnitId} // Pass down ID to auto-expand
+            revealUnitId={revealUnitId}
+            refreshKey={refreshKey}
+            onTagSelect={handleTagClickFromTree}
+            isSelectionMode={isEditorVisible}
         />
       </div>
 
