@@ -10,6 +10,7 @@ export interface LogicalUnit {
   source_code?: string;
   source_page_id?: number;
   title?: string;
+  created_by?: number;
 }
 
 export interface PageMetadata {
@@ -38,7 +39,8 @@ export interface DefinedTag {
   label: string;
   parent_id?: number;
   description?: string;
-  is_official?: boolean;
+  created_by?: number;
+  is_official?: boolean | number;
 }
 
 export type StagedItem = 
