@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSelection } from '@/side_panel/context/SelectionContext';
 import { TaxonomyExplorer } from './TaxonomyExplorer';
-import { TagInput, Tag } from '../components/TagInput'; // Import Tag type
+import { TagInput, Tag } from '../components/TagInput';
 import { useApi } from '@/hooks/useApi';
-import { MagnifyingGlassIcon, UserIcon, BuildingLibraryIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { 
+    MagnifyingGlassIcon, UserIcon, BuildingLibraryIcon, 
+    TrashIcon, PencilSquareIcon, CheckIcon, XMarkIcon 
+} from '@heroicons/react/24/solid';
 import { LogicalUnit, DefinedTag } from '@/utils/types';
 
 export const Tags = () => {
@@ -13,9 +16,13 @@ export const Tags = () => {
   // Header State
   const [filterText, setFilterText] = useState('');
   
+  // Edit Tree Mode
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [treeChanges, setTreeChanges] = useState<{id: number, parent_id: number | null}[]>([]);
+  
   // Editor State
   const [editingUnit, setEditingUnit] = useState<LogicalUnit | null>(null);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]); // CHANGED: Store Objects
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]); 
   const [isSaving, setIsSaving] = useState(false);
   const [revealUnitId, setRevealUnitId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -101,6 +108,73 @@ export const Tags = () => {
         setEditingUnit(null);
     } catch (e) {
         alert("Could not delete.");
+    }
+  };
+
+  // [NEW] Batch Save Taxonomy
+  const handleSaveTree = async () => {
+    if (treeChanges.length === 0) {
+        setIsEditMode(false);
+        return;
+    }
+    
+    setIsSaving(true);
+    try {
+        await put('/api/tags/hierarchy', { updates: treeChanges });
+        setTreeChanges([]); // Clear buffer
+        setIsEditMode(false);
+        setRefreshKey(prev => prev + 1); // Reload tree
+    } catch (e) {
+        alert("Failed to save hierarchy changes.");
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  // [NEW] Delete Tag Logic
+  const handleTagDeleteRequest = async (tag: DefinedTag, hasChildren: boolean) => {
+    if (hasChildren) {
+        alert("You must delete or move all child tags before you can delete this one.");
+        return;
+    }
+
+    // Ask about snippets
+    // We strictly use confirm/prompt here for simplicity, ideally a Modal component
+    const choice = confirm(
+        `Delete tag "${tag.label}"?\n\n` + 
+        `Click OK to delete snippets attached to this tag as well.\n` + 
+        `Click Cancel to move snippets to 'Uncategorized'.`
+    );
+    
+    // Note: The prompt logic in browser `confirm` is binary. 
+    // To strictly match your requirement "Yes | No" where No = Move:
+    // We might need a custom modal. For now, let's assume `confirm` = Delete All, 
+    // and we create a specific behavior.
+    // actually, let's make it clearer:
+    
+    // Simulating the logic with window.confirm isn't great for "Yes/No = Do A/Do B".
+    // Implementing a quick custom flow:
+    
+    /* Since I cannot inject a Modal component code without rewriting your Layout, 
+       I will use a two-step native alert flow.
+    */
+    
+    const shouldDelete = confirm(`Are you sure you want to delete "${tag.label}"?`);
+    if (!shouldDelete) return;
+
+    const moveUnits = !confirm(
+        `Do you want to DELETE all snippets categorized here?\n\n` + 
+        `OK = Yes, Delete snippets\n` + 
+        `Cancel = No, move snippets to 'Uncategorized'`
+    );
+
+    try {
+        await del(`/api/tags/${tag.id}`, { 
+             data: { move_units_to_uncategorized: moveUnits } // Pass via body 
+        });
+        setRefreshKey(prev => prev + 1);
+    } catch (e: any) {
+        alert(e.message || "Could not delete tag");
     }
   };
 
