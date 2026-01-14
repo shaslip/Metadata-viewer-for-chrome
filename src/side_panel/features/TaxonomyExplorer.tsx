@@ -13,10 +13,13 @@ interface TreeNode extends DefinedTag {
 interface Props {
     filter: string;
     viewMode: 'mine' | 'all';
-    revealUnitId: number | null; // ID of the unit clicked on page (to auto-expand)
+    revealUnitId: number | null;
+    refreshKey: number;
+    onTagSelect: (tag: DefinedTag) => void;
+    isSelectionMode: boolean;
 }
 
-export const TaxonomyExplorer: React.FC<Props> = ({ filter, viewMode, revealUnitId }) => {
+export const TaxonomyExplorer: React.FC<Props> = ({ filter, viewMode, revealUnitId, refreshKey, onTagSelect, isSelectionMode }) => {
   const { get } = useApi();
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +106,9 @@ export const TaxonomyExplorer: React.FC<Props> = ({ filter, viewMode, revealUnit
             node={node} 
             highlightUnitId={revealUnitId}
             forceExpand={node.forceExpand}
+            refreshKey={refreshKey}
+            onTagSelect={onTagSelect}
+            isSelectionMode={isSelectionMode}
          />
        ))}
     </div>
@@ -110,7 +116,16 @@ export const TaxonomyExplorer: React.FC<Props> = ({ filter, viewMode, revealUnit
 };
 
 // 5. Node Component (Now accepts highlightUnitId)
-const TaxonomyNode = ({ node, highlightUnitId, forceExpand }: { node: TreeNode, highlightUnitId: number | null, forceExpand?: boolean }) => {
+const TaxonomyNode = ({ 
+    node, highlightUnitId, forceExpand, refreshKey, onTagSelect, isSelectionMode 
+}: { 
+    node: TreeNode,
+    highlightUnitId: number | null,
+    forceExpand?: boolean,
+    refreshKey: number,
+    onTagSelect: (tag: DefinedTag) => void,
+    isSelectionMode: boolean
+}) => {
     const { get } = useApi();
     const [expanded, setExpanded] = useState(forceExpand || false);
     const [units, setUnits] = useState<LogicalUnit[]>([]);
