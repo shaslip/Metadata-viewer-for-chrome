@@ -118,22 +118,21 @@ const renderHighlights = () => {
     }
 };
 
-// Helper to perform the scroll and visual flash
-const attemptScroll = () => {
+// Helper to perform the scroll with Retry Logic
+const attemptScroll = (attempts = 10) => {
     if (!pendingScrollId) return;
 
     const el = document.querySelector(`.rag-highlight[data-unit-id="${pendingScrollId}"]`);
+    
     if (el) {
-        // 1. Scroll
+        // FOUND IT: Scroll and Flash
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         
-        // 2. Flash Effect (Requires CSS or inline styles)
-        // Using inline styles for safety if you don't have the CSS class set up
         const originalTransition = (el as HTMLElement).style.transition;
         const originalBg = (el as HTMLElement).style.backgroundColor;
         
         (el as HTMLElement).style.transition = "background-color 0.5s ease";
-        (el as HTMLElement).style.backgroundColor = "rgba(255, 255, 0, 0.8)"; // Bright Yellow Flash
+        (el as HTMLElement).style.backgroundColor = "rgba(255, 235, 59, 0.8)"; // Bright Yellow
 
         setTimeout(() => {
             (el as HTMLElement).style.backgroundColor = originalBg;
@@ -142,8 +141,10 @@ const attemptScroll = () => {
             }, 500);
         }, 1500);
 
-        // 3. Clear Queue
-        pendingScrollId = null;
+        pendingScrollId = null; // Clear queue
+    } else if (attempts > 0) {
+        // NOT FOUND YET: Retry in 250ms
+        setTimeout(() => attemptScroll(attempts - 1), 250);
     }
 };
 
