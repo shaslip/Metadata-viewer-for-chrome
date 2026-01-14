@@ -50,9 +50,16 @@ export const initHighlighter = async () => {
     });
 
     // 4. Listen for Relationship Updates from Side Panel
-    chrome.runtime.onMessage.addListener((request) => {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        
+        // --- NEW: Handle Context Request ---
+        if (request.type === 'GET_PAGE_CONTEXT') {
+            const meta = getPageMetadata();
+            sendResponse(meta);
+            return true; // Required for async sendResponse
+        }
+
         if (request.type === 'UPDATE_HIGHLIGHTS' && Array.isArray(request.units)) {
-            // Merge incoming units into cache, overwriting duplicates by ID
             const incomingIds = new Set(request.units.map((u: any) => u.id));
             cachedUnits = [
                 ...cachedUnits.filter(u => !incomingIds.has(u.id)), 
@@ -61,7 +68,6 @@ export const initHighlighter = async () => {
             renderHighlights();
         }
 
-        // --- Handle Data Reload (Triggered by Save) ---
         if (request.type === 'TRIGGER_DATA_RELOAD') {
             fetchAndRender();
         }
