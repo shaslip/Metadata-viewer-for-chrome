@@ -56,39 +56,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'NAVIGATE_TO_UNIT') {
         const { source_code, source_page_id, unit_id, title } = request;
 
-        // 1. Resolve Base URL (Adjust domains if necessary)
         let baseUrl = 'https://bahai.works'; 
         if (source_code === 'bp') baseUrl = 'https://bahaipedia.org';
         if (source_code === 'bd') baseUrl = 'https://bahaidata.org';
         if (source_code === 'bm') baseUrl = 'https://bahai.media';
 
-        // MediaWiki standard URL pattern
+        // 1. Construct the Target URL (Pretty)
+        // We generally want the Pretty URL, but we need to handle the slash encoding carefully.
         let targetUrl = `${baseUrl}/index.php?curid=${source_page_id}`;
-        if (title) {
+        let targetPath = ""; // Used for comparison
+
+        if (title && title !== "Auto-Discovered Page") {
             const safeTitle = title.replace(/ /g, '_'); 
-            targetUrl = `${baseUrl}/${encodeURIComponent(safeTitle)}`;
-        } else {
-            console.warn(`[Nav] Title missing for PageID ${source_page_id}. Falling back to curid.`);
+            // We encode the title, BUT we revert encoded slashes (%2F) to real slashes (/)
+            // because MediaWiki uses real slashes for structure.
+            const prettyTitle = encodeURIComponent(safeTitle).replace(/%2F/g, '/');
+            targetUrl = `${baseUrl}/${prettyTitle}`;
+            targetPath = prettyTitle;
         }
 
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const currentTab = tabs[0];
             if (!currentTab?.id) return;
 
-            // 2. Check if we are already on the correct page
-            // We check if the URL contains the Page ID
-            const isOnPage = currentTab.url && currentTab.url.includes(`curid=${source_page_id}`);
+            const currentUrl = currentTab.url || "";
+
+            // 2. STRICT CHECK: Are we on the page?
+            // We decode BOTH strings to compare their actual characters, ignoring encoding differences.
+            const decodedCurrent = decodeURIComponent(currentUrl);
+            const decodedTarget = decodeURIComponent(targetPath);
+            
+            // We check:
+            // A. Does the URL contain the ID? (Legacy/Direct links)
+            // B. Does the Decoded URL contain the Decoded Title? (Pretty links)
+            const isOnPage = 
+                currentUrl.includes(`curid=${source_page_id}`) || 
+                (targetPath && decodedCurrent.includes(decodedTarget));
 
             if (isOnPage) {
-                // A. Same Page: Just Scroll
+                // ALREADY THERE: Just scroll
                 chrome.tabs.sendMessage(currentTab.id, { 
                     type: 'SCROLL_TO_UNIT', 
                     unit_id 
                 });
             } else {
-                // B. Different Page: Navigate -> Wait for Load -> Scroll
+                // WRONG PAGE: Force Navigation
                 chrome.tabs.update(currentTab.id, { url: targetUrl }, (tab) => {
-                    // Add a one-time listener to wait for the page to finish loading
+                    // Wait for load to finish
                     const listener = (tabId: number, changeInfo: any) => {
                         if (tabId === tab?.id && changeInfo.status === 'complete') {
                             chrome.tabs.sendMessage(tabId, { 
