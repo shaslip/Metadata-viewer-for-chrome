@@ -150,6 +150,7 @@ export const QAManager = () => {
       } : {
           source_code: answer.context.source_code,
           source_page_id: answer.context.source_page_id,
+          title: answer.context.title,
           text_content: answer.text,
           start_char_index: answer.offsets.start,
           end_char_index: answer.offsets.end,
