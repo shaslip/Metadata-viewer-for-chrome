@@ -134,12 +134,32 @@ const TaxonomyNode = ({
         if(forceExpand) setExpanded(true);
     }, [forceExpand]);
 
-    // Lazy load units on expand
+    // Refresh listener: Re-fetch units when parent signals a change (Create/Delete)
+    useEffect(() => {
+        if (expanded) {
+             // Re-fetch to get new/deleted units
+             get(`/api/units?tag_id=${node.id}&limit=10`).then(setUnits).catch(() => {});
+        }
+    }, [refreshKey]); 
+
+    // Lazy load (also listens to refreshKey via the effect above effectively)
     useEffect(() => {
         if (expanded && units.length === 0) {
              get(`/api/units?tag_id=${node.id}&limit=10`).then(setUnits).catch(() => {});
         }
     }, [expanded]);
+
+    // Split Click Logic
+    const handleLabelClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isSelectionMode) {
+            // BEHAVIOR 1: If Editor is open, Clicking Label = "Attach Tag"
+            onTagSelect(node);
+        } else {
+            // BEHAVIOR 2: If Editor closed, Clicking Label = "Toggle Expand"
+            setExpanded(!expanded);
+        }
+    };
 
     return (
         <div className="ml-3 border-l border-slate-200 pl-2">
