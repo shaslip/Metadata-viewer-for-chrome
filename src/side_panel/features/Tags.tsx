@@ -24,6 +24,7 @@ export const Tags = () => {
       const unitPayload = {
         source_code: currentSelection.context.source_code,
         source_page_id: currentSelection.context.source_page_id,
+        title: currentSelection.context.title,
         text_content: currentSelection.text,
         start_char_index: currentSelection.offsets.start,
         end_char_index: currentSelection.offsets.end,
