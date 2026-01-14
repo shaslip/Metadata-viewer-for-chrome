@@ -25,10 +25,10 @@ export default function App() {
     <SelectionProvider>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Label />} />
-          <Route path="relations" element={<RelationshipManager />} />
+          <Route index element={<Tags />} />
+          <Route path="relations" element={<Label />} />
           <Route path="qa" element={<QAManager />} />
-          <Route path="taxonomy" element={<TaxonomyExplorer />} />
+          <Route path="taxonomy" element={<RelationshipManager />} />
         </Route>
       </Routes>
     </SelectionProvider>
