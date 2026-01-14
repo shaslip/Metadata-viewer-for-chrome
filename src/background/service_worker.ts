@@ -63,7 +63,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (source_code === 'bm') baseUrl = 'https://bahai.media';
 
         // MediaWiki standard URL pattern
-        const targetUrl = `${baseUrl}/index.php?curid=${source_page_id}`;
+        let targetUrl = `${baseUrl}/index.php?curid=${source_page_id}`;
+        if (title) {
+            // MediaWiki underscores spaces in URLs
+            const safeTitle = title.replace(/ /g, '_'); 
+            targetUrl = `${baseUrl}/${encodeURIComponent(safeTitle)}`;
+        }
 
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const currentTab = tabs[0];
