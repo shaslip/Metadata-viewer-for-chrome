@@ -67,7 +67,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (title) {
             const safeTitle = title.replace(/ /g, '_'); 
             targetUrl = `${baseUrl}/${encodeURIComponent(safeTitle)}`;
-        }
         } else {
             console.warn(`[Nav] Title missing for PageID ${source_page_id}. Falling back to curid.`);
         }
