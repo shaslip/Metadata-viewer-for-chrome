@@ -17,9 +17,6 @@ export const initHighlighter = async () => {
     
     // Helper to run the fetch (Used by Init + Reload Trigger)
     const fetchAndRender = async () => {
-        // Ensure we actually have the metadata required to fetch
-        if (!meta.source_code || !meta.source_page_id) return;
-
         const response = await chrome.runtime.sendMessage({
             type: 'FETCH_PAGE_DATA',
             source_code: meta.source_code,
@@ -44,6 +41,8 @@ export const initHighlighter = async () => {
     });
 
     // 4. NEW: Listen for Relationship Updates from Side Panel
+    // This allows the React App to inject "link_subject" types that might 
+    // strictly be "other" in the DB, ensuring they show up in the correct color.
     chrome.runtime.onMessage.addListener((request) => {
         if (request.type === 'UPDATE_HIGHLIGHTS' && Array.isArray(request.units)) {
             // Merge incoming units into cache, overwriting duplicates by ID
@@ -74,14 +73,9 @@ const renderHighlights = () => {
 
     // 2. Filter Units based on Mode
     const unitsToRender = cachedUnits.filter(unit => {
-        // --- FIXED LOGIC HERE ---
-        // OLD: return unit.unit_type === 'user_highlight'; 
-        // PROBLEM: This hid all Tablets/Prayers (the base content).
-        
+        // --- NEW: Tags View ---
         if (currentMode === 'TAXONOMY_MODE') {
-             // Show User Highlights AND Base Content.
-             // Hide only the "special" overlays (QA and Relations).
-             return !['canonical_answer', 'link_subject', 'link_object'].includes(unit.unit_type);
+             return unit.unit_type === 'user_highlight';
         }
 
         if (currentMode === 'QA_MODE') {
@@ -93,7 +87,6 @@ const renderHighlights = () => {
         }
 
         if (currentMode === 'CREATE_MODE') {
-            // Label Tab: Show Base Content to edit it. Hide User Highlights/Relations.
             return !['canonical_answer', 'link_subject', 'link_object', 'user_highlight'].includes(unit.unit_type); 
         }
         
