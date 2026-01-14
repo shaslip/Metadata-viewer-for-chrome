@@ -322,10 +322,6 @@ export const Tags = () => {
               ) : (
                   /* CONDITION: Editing Unit (Snippet) */
                   <>
-                      <blockquote className="text-xs text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-4 line-clamp-3">
-                          "{currentSelection ? currentSelection.text : editingUnit?.text_content}"
-                      </blockquote>
-
                       <TagInput tags={selectedTags} onChange={setSelectedTags} />
                       
                       <div className="mt-4 flex justify-end">
