@@ -3,7 +3,7 @@ import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { useSelection } from '@/side_panel/context/SelectionContext';
 import { UnitForm } from '@/side_panel/components/UnitForm';
 
-export const UnitCreator = () => {
+export const Label = () => {
   const { currentSelection, selectedUnit, clearSelection } = useSelection();
 
   // 1. Edit Mode (Existing Unit)
@@ -23,11 +23,11 @@ export const UnitCreator = () => {
     );
   }
 
-  // 2. Create Mode (New Selection)
+  // 2. Label Mode (New Selection)
   if (currentSelection) {
     return (
       <div className="p-4">
-        <h2 className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-wider">New Unit</h2>
+        <h2 className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-wider">New addition</h2>
         <UnitForm 
           selection={currentSelection.text}
           offsets={currentSelection.offsets}
@@ -46,7 +46,7 @@ export const UnitCreator = () => {
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-400">
       <PencilSquareIcon className="h-12 w-12 mb-2 opacity-20" /> {/* Import Icon if needed or remove */}
-      <p className="text-sm">Highlight text on the page to create a new Logical Unit, or click an existing highlight to edit.</p>
+      <p className="text-sm">Highlight text on the page to add define a new relationship, or click an existing highlight to edit.</p>
     </div>
   );
 };
