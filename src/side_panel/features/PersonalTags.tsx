@@ -3,7 +3,7 @@ import { useSelection } from '@/side_panel/context/SelectionContext';
 import { useApi } from '@/hooks/useApi';
 import { TagInput } from '../components/TagInput';
 
-export const UnitCreator = () => {
+export const PersonalTags = () => {
   const { currentSelection, clearSelection } = useSelection();
   const { post } = useApi();
   
