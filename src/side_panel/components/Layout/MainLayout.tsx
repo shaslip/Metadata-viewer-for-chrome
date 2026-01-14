@@ -35,15 +35,15 @@ export const MainLayout = () => {
       </div>
 
       <div className="fixed bottom-0 w-full h-14 bg-white border-t border-slate-200 flex justify-around items-center shadow-lg z-50">
-        
-        <button onClick={() => navigate('/')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/')}`}>
-          <PencilSquareIcon className="h-6 w-6" />
-          <span className="text-[10px] font-medium">Create</span>
+
+        <button onClick={() => navigate('/taxonomy')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/taxonomy')}`}>
+          <TagIcon className="h-6 w-6" />
+          <span className="text-[10px] font-medium">Tags</span>
         </button>
 
-        <button onClick={() => navigate('/relations')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/relations')}`}>
-          <LinkIcon className="h-6 w-6" />
-          <span className="text-[10px] font-medium">Link</span>
+        <button onClick={() => navigate('/')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/')}`}>
+          <PencilSquareIcon className="h-6 w-6" />
+          <span className="text-[10px] font-medium">Label</span>
         </button>
 
         <button onClick={() => navigate('/qa')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/qa')}`}>
@@ -51,9 +51,9 @@ export const MainLayout = () => {
           <span className="text-[10px] font-medium">Q&A</span>
         </button>
 
-        <button onClick={() => navigate('/taxonomy')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/taxonomy')}`}>
-          <TagIcon className="h-6 w-6" />
-          <span className="text-[10px] font-medium">Tags</span>
+        <button onClick={() => navigate('/relations')} className={`flex flex-col items-center p-2 w-full ${getTabClass('/relations')}`}>
+          <LinkIcon className="h-6 w-6" />
+          <span className="text-[10px] font-medium">Link</span>
         </button>
 
       </div>
