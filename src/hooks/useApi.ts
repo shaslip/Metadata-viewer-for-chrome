@@ -33,6 +33,7 @@ export const useApi = () => {
   return {
     get: (url: string) => request(url, 'GET'),
     post: (url: string, data: any) => request(url, 'POST', data),
+    put: (url: string, data: any) => request(url, 'PUT', data),
     del: (url: string) => request(url, 'DELETE'),
     error
   };
