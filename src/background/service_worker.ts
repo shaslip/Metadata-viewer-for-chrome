@@ -106,14 +106,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 });
             } else {
                 // B. Different Page: Navigate -> Wait for Load -> Scroll
-                chrome.tabs.update(currentTab.id, { url: targetUrl }, (tab) => {
-                    // Add a one-time listener to wait for the page to finish loading
+                chrome.tabs.update(currentTab.id, { url: targetUrl }, (updatedTab) => {
+                    // Determine the correct ID (updatedTab.id might be undefined in some contexts, fallback to current)
+                    const targetTabId = updatedTab?.id || currentTab.id;
+                    if (!targetTabId) return;
+
                     const listener = (tabId: number, changeInfo: any) => {
-                        if (tabId === tab?.id && changeInfo.status === 'complete') {
-                            chrome.tabs.sendMessage(tabId, { 
-                                type: 'SCROLL_TO_UNIT', 
-                                unit_id 
-                            });
+                        if (tabId === targetTabId && changeInfo.status === 'complete') {
+                            
+                            // --- CHANGE: Retry Loop ---
+                            // We repeatedly attempt to send the message. If the content script
+                            // isn't ready (runtime.lastError), we wait and try again.
+                            let attempts = 0;
+                            const maxAttempts = 20; // Try for ~4 seconds total
+
+                            const sendMessageRetry = () => {
+                                chrome.tabs.sendMessage(tabId, { 
+                                    type: 'SCROLL_TO_UNIT', 
+                                    unit_id 
+                                }, (response) => {
+                                    if (chrome.runtime.lastError) {
+                                        // Content script not listening yet? Wait and retry.
+                                        attempts++;
+                                        if (attempts < maxAttempts) {
+                                            setTimeout(sendMessageRetry, 200);
+                                        } else {
+                                            console.warn("[Nav] Scroll timeout: Content script never responded.");
+                                        }
+                                    } 
+                                    // If no error, message received. 
+                                    // highlighter.ts will handle the element rendering wait.
+                                });
+                            };
+
+                            sendMessageRetry();
+                            // --------------------------
+
                             chrome.tabs.onUpdated.removeListener(listener);
                         }
                     };
