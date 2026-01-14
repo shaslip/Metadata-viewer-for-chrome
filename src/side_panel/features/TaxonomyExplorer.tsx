@@ -31,7 +31,7 @@ interface Props {
     isEditMode: boolean;
     onTreeChange: (changes: {id: number, parent_id: number | null}[]) => void;
     onDeleteTag: (tag: DefinedTag, hasChildren: boolean) => void;
-    onEditTag: (tag: DefinedTag) => void; // [NEW] Callback for renaming
+    onEditTag: (tag: DefinedTag) => void;
 }
 
 export const TaxonomyExplorer: React.FC<Props> = ({ 
@@ -93,7 +93,8 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     if (!over || active.id === over.id) return;
 
     const activeId = active.id as number;
-    const overId = over.id as number;
+    // Over ID can be string ('ROOT_DROP_ZONE') or number (Tag ID)
+    const overId = over.id; 
 
     const removeNode = (nodes: TreeNode[], id: number): { cleaned: TreeNode[], movedNode: TreeNode | null } => {
         let movedNode: TreeNode | null = null;
@@ -127,9 +128,18 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     const { cleaned, movedNode } = removeNode(localTree, activeId);
     
     if (movedNode) {
-        const newTree = insertNode(cleaned, overId, movedNode);
-        setLocalTree(newTree);
-        onTreeChange([{ id: activeId, parent_id: overId }]);
+        // CASE A: Dropped into Root Zone
+        if (overId === 'ROOT_DROP_ZONE') {
+             // Add to root level of cleaned tree
+             setLocalTree([...cleaned, movedNode]);
+             onTreeChange([{ id: activeId, parent_id: null }]);
+        } 
+        // CASE B: Dropped into another tag (Nesting)
+        else {
+             const newTree = insertNode(cleaned, overId as number, movedNode);
+             setLocalTree(newTree);
+             onTreeChange([{ id: activeId, parent_id: overId as number }]);
+        }
     }
   };
 
@@ -139,7 +149,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
         const matchesText = node.label.toLowerCase().includes(filter.toLowerCase());
         const processedChildren = processNodes(node.children || []);
         
-        // If text matches OR children match OR it is manually expanded
         const isExpandedInState = expandedNodeIds.has(node.id);
         const shouldExpand = (!!filter && processedChildren.length > 0) || isExpandedInState;
 
@@ -152,7 +161,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
 
   const displayTree = useMemo(() => processNodes(localTree), [localTree, filter, expandedNodeIds]);
 
-  // 5. Toggle Handler
   const handleToggleExpand = (id: number) => {
       const newSet = new Set(expandedNodeIds);
       if (newSet.has(id)) newSet.delete(id);
@@ -164,15 +172,19 @@ export const TaxonomyExplorer: React.FC<Props> = ({
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="pb-10"> 
+        <div className="pb-10 px-2"> 
+           {/* [NEW] Root Drop Zone - Visible only in Edit Mode */}
+           {isEditMode && <RootDropZone />}
+
            {displayTree.length === 0 && <div className="p-4 text-sm text-slate-400">No tags found.</div>}
+           
            {displayTree.map(node => (
              <TaxonomyNode 
                key={node.id} 
                node={node} 
                isEditMode={isEditMode}
                onDeleteTag={onDeleteTag}
-               onEditTag={onEditTag} // [NEW]
+               onEditTag={onEditTag}
                highlightUnitId={revealUnitId}
                refreshKey={refreshKey}
                onTagSelect={onTagSelect}
@@ -194,6 +206,25 @@ export const TaxonomyExplorer: React.FC<Props> = ({
   );
 };
 
+// [NEW] Root Drop Zone Component
+const RootDropZone = () => {
+    const { setNodeRef, isOver } = useDroppable({ id: 'ROOT_DROP_ZONE' });
+    return (
+        <div 
+            ref={setNodeRef} 
+            className={`
+                mb-2 p-3 border-2 border-dashed rounded-lg text-center text-xs font-bold transition-all duration-200
+                ${isOver 
+                    ? 'border-blue-500 bg-blue-50 text-blue-600 scale-[1.02] shadow-sm' 
+                    : 'border-slate-200 text-slate-400 hover:border-slate-300'
+                }
+            `}
+        >
+            {isOver ? "Release to Make Root Item" : "Drag here to move to Root Level"}
+        </div>
+    );
+};
+
 const TaxonomyNode = ({ 
     node, isEditMode, onDeleteTag, onEditTag, highlightUnitId, refreshKey, onTagSelect, isSelectionMode, isExpanded, onToggleExpand
 }: any) => {
@@ -210,7 +241,6 @@ const TaxonomyNode = ({
         disabled: !isEditMode
     });
 
-    // Lazy Load: Only fetch if expanded AND NOT in Edit Mode (optimization)
     useEffect(() => {
         if (isExpanded && units.length === 0 && !isEditMode) {
              get(`/api/units?tag_id=${node.id}&limit=10`).then(setUnits).catch(() => {});
@@ -226,7 +256,6 @@ const TaxonomyNode = ({
     const handleLabelClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isEditMode) {
-            // [NEW] Open Rename Menu
             if (!node.is_official) onEditTag(node);
             return;
         } 
@@ -287,7 +316,7 @@ const TaxonomyNode = ({
                             node={child} 
                             isEditMode={isEditMode} 
                             onDeleteTag={onDeleteTag}
-                            onEditTag={onEditTag} // [NEW]
+                            onEditTag={onEditTag} 
                             highlightUnitId={highlightUnitId}
                             refreshKey={refreshKey}
                             onTagSelect={onTagSelect}
@@ -297,7 +326,6 @@ const TaxonomyNode = ({
                         />
                     ))}
                     
-                    {/* [NEW] Hide Snippets when in Edit Mode */}
                     {!isEditMode && units.map((u: LogicalUnit) => {
                         const isActive = highlightUnitId === u.id;
                         return (
