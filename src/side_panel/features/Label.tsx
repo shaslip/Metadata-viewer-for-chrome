@@ -45,7 +45,7 @@ export const Label = () => {
   // 3. Idle State
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-400">
-      <p className="text-sm">This tab can be used to highlight a tablet from ‘Abdu’l-Bahá in Star of the West or letter from the Guardian in Bahá’í News.</p>
+      <p className="text-sm">This tab could be used to highlight a tablet from ‘Abdu’l-Bahá in Star of the West or letter from the Guardian in Bahá’í News.</p>
       <PencilSquareIcon className="h-12 w-12 mb-2 opacity-20" /> {/* Import Icon if needed or remove */}
       <p className="text-sm">Doing so would allow bahai.chat to answer queries like 'Tell me about the tablets from ‘Abdu’l-Bahá that appeared in Star of the West in 1910'.</p>
     </div>
