@@ -8,8 +8,8 @@ let currentMode: string = 'TAXONOMY_MODE';
 let pendingScrollId: number | null = null;
 
 // Constants for Healer
-const ANCHOR_SIZE = 50; 
-const SEARCH_RADIUS = 2000; // Search +/- 2000 chars around original spot
+const ANCHOR_RETRY_SIZES = [50, 20];
+const SEARCH_RADIUS = 2000;
 
 export const initHighlighter = async () => {
     // 1. Load active mode
@@ -93,11 +93,9 @@ export const initHighlighter = async () => {
 const getContentText = (): string => {
     const container = document.querySelector('#mw-content-text');
     if (!container) return "";
-
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
     let text = "";
     let node;
-    
     while ((node = walker.nextNode())) {
         text += node.textContent;
     }
@@ -106,8 +104,6 @@ const getContentText = (): string => {
 
 const verifyAndHealUnits = async () => {
     const updatesToSync: any[] = [];
-    
-    // Lazy-load the massive text string only if we actually encounter a failure
     let lazyPageText: string | null = null;
     const getPageText = () => {
         if (!lazyPageText) lazyPageText = getContentText();
@@ -119,38 +115,37 @@ const verifyAndHealUnits = async () => {
     cachedUnits.forEach(unit => {
         if ((unit as any).broken_index) return;
 
-        // 1. VERIFY: Can we render it right now?
+        // 1. VERIFY
         let isHealthy = false;
         try {
             const range = findRangeFromOffsets(unit.start_char_index, unit.end_char_index);
             if (range) {
                 const rangeText = range.toString();
-                // Check Exact OR Soft Match
                 if (rangeText === unit.text_content || normalize(rangeText) === normalize(unit.text_content)) {
                     isHealthy = true;
                 }
             }
-        } catch (e) {
-            isHealthy = false;
+        } catch (e) { isHealthy = false; }
+
+        if (isHealthy) return;
+
+        // 2. HEAL
+        const pageText = getPageText();
+        if (!pageText) return;
+
+        // [NEW] Retry Loop for Anchors
+        let result = null;
+        for (const size of ANCHOR_RETRY_SIZES) {
+             result = performAnchorSearch(unit, pageText, size);
+             if (result) break; // Found it!
         }
 
-        if (isHealthy) return; 
-
-        // 2. HEAL: Verification failed, run the Healer
-        const pageText = getPageText();
-        if (!pageText) return; // Should not happen on valid wiki pages
-
-        const result = performAnchorSearch(unit, pageText);
-
         if (result) {
-            console.log(`[Healer] Repaired Unit ${unit.id}. Shifted by ${result.start - unit.start_char_index} chars.`);
-            
-            // A. Update Local Cache (Render immediately)
+            console.log(`[Healer] Repaired Unit ${unit.id} using anchor size ${result.usedAnchorSize}.`);
             unit.start_char_index = result.start;
             unit.end_char_index = result.end;
-            unit.text_content = result.newText; 
+            unit.text_content = result.newText;
 
-            // B. Queue Remote Update
             updatesToSync.push({
                 id: unit.id,
                 start_char_index: result.start,
@@ -158,7 +153,7 @@ const verifyAndHealUnits = async () => {
                 text_content: result.newText
             });
         } else {
-            console.warn(`[Healer] Could not locate Unit ${unit.id}. Marking as broken.`);
+            console.warn(`[Healer] Failed Unit ${unit.id} after all attempts.`);
             (unit as any).broken_index = 1;
             updatesToSync.push({ id: unit.id, broken_index: 1 });
         }
@@ -172,52 +167,71 @@ const verifyAndHealUnits = async () => {
     }
 };
 
-const performAnchorSearch = (unit: LogicalUnit, pageText: string) => {
-    const originalStart = unit.start_char_index;
+const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: number) => {
     const originalText = unit.text_content;
+    const originalStart = unit.start_char_index;
 
-    // 1. Setup Anchors (Bookends)
-    const headAnchor = originalText.substring(0, ANCHOR_SIZE);
-    const tailAnchor = originalText.substring(originalText.length - ANCHOR_SIZE);
+    // Safety: Don't use anchors larger than half the text
+    if (anchorSize * 2 > originalText.length) {
+        return null;
+    }
 
-    // 2. Search Strategy
-    // First, look in the "Neighborhood" (+/- 5000 chars)
-    // If that fails, look at the whole page (Global Fallback)
-    
-    let searchStart = Math.max(0, originalStart - SEARCH_RADIUS);
-    let searchEnd = Math.min(pageText.length, originalStart + originalText.length + SEARCH_RADIUS);
-    let neighborhood = pageText.substring(searchStart, searchEnd);
+    const headAnchor = originalText.substring(0, anchorSize);
+    const tailAnchor = originalText.substring(originalText.length - anchorSize);
 
-    const findAnchor = (anchor: string, fromEnd = false): number => {
-        // A. Neighborhood Search
-        let relIndex = fromEnd ? neighborhood.lastIndexOf(anchor) : neighborhood.indexOf(anchor);
-        if (relIndex !== -1) return searchStart + relIndex;
+    // Define Neighborhood
+    const searchStart = Math.max(0, originalStart - SEARCH_RADIUS);
+    const searchEnd = Math.min(pageText.length, originalStart + originalText.length + SEARCH_RADIUS);
+    const neighborhood = pageText.substring(searchStart, searchEnd);
 
-        // B. Global Search
-        return fromEnd ? pageText.lastIndexOf(anchor) : pageText.indexOf(anchor);
+    // Helper: Find all occurrences of a string in a text block
+    const findAllIndices = (haystack: string, needle: string, offset: number) => {
+        const indices = [];
+        let idx = haystack.indexOf(needle);
+        while (idx !== -1) {
+            indices.push(offset + idx);
+            idx = haystack.indexOf(needle, idx + 1);
+        }
+        return indices;
     };
 
-    const newStart = findAnchor(headAnchor, false);
-    const newEndAnchorStart = findAnchor(tailAnchor, true); // Look for tail specifically
+    // 1. Find all Head Candidates (Neighborhood first, then Global)
+    let headCandidates = findAllIndices(neighborhood, headAnchor, searchStart);
+    if (headCandidates.length === 0) {
+        // Fallback: Global Search
+        headCandidates = findAllIndices(pageText, headAnchor, 0);
+    }
+    if (headCandidates.length === 0) return null;
 
-    if (newStart !== -1 && newEndAnchorStart !== -1) {
-        const newEnd = newEndAnchorStart + ANCHOR_SIZE;
-        
-        // 3. Validation
-        if (newEnd <= newStart) return null; // Tail before Head
+    // 2. Find Best Match
+    let bestMatch = null;
+    let minDiff = Infinity;
 
-        const newText = pageText.substring(newStart, newEnd);
-        
-        // Length Check: Allow up to 30% change (for deleted templates) OR 50 chars variance
-        const lenDiff = Math.abs(newText.length - originalText.length);
-        const allowedDiff = Math.max(50, originalText.length * 0.3);
+    for (const startPos of headCandidates) {
+        // We only look for the tail AFTER the startPos
+        // Optimization: Don't search the whole document, just a reasonable window after startPos
+        const expectedEnd = startPos + originalText.length;
+        const windowEnd = Math.min(pageText.length, expectedEnd + SEARCH_RADIUS); // Look forward 5000 chars
+        const searchWindow = pageText.substring(startPos, windowEnd);
 
-        if (lenDiff < allowedDiff) {
-            return { start: newStart, end: newEnd, newText };
+        const tailRelIndex = searchWindow.indexOf(tailAnchor, anchorSize); // Must appear AFTER head
+
+        if (tailRelIndex !== -1) {
+            const endPos = startPos + tailRelIndex + anchorSize;
+            const newText = pageText.substring(startPos, endPos);
+            
+            const lenDiff = Math.abs(newText.length - originalText.length);
+            // Allow 50% change or 50 chars (generous for deleted templates)
+            const allowedDiff = Math.max(50, originalText.length * 0.5);
+
+            if (lenDiff < allowedDiff && lenDiff < minDiff) {
+                minDiff = lenDiff;
+                bestMatch = { start: startPos, end: endPos, newText, usedAnchorSize: anchorSize };
+            }
         }
     }
 
-    return null;
+    return bestMatch;
 };
 
 // --- RENDER LOGIC ---
