@@ -103,7 +103,7 @@ const getContentText = (): string => {
 
 const verifyAndHealUnits = async () => {
     const updatesToSync: any[] = [];
-    const brokenUnits: LogicalUnit[] = []; // [NEW] Track failures locally
+    const brokenUnits: LogicalUnit[] = []; 
     
     let lazyPageText: string | null = null;
     const getPageText = () => {
@@ -114,8 +114,11 @@ const verifyAndHealUnits = async () => {
     const normalize = (str: string) => str.replace(/\s+/g, ' ').trim();
 
     cachedUnits.forEach(unit => {
-        // If already marked broken in DB, add to list and skip check
-        if ((unit as any).broken_index) {
+        // [CHANGED] Explicit boolean check to avoid issues with 0 vs undefined
+        const isMarkedBroken = !!(unit as any).broken_index;
+
+        // If explicitly broken in DB, trust it and skip verification
+        if (isMarkedBroken) {
              brokenUnits.push(unit);
              return;
         }
@@ -132,21 +135,25 @@ const verifyAndHealUnits = async () => {
             }
         } catch (e) { isHealthy = false; }
 
-        if (isHealthy) return;
+        if (isHealthy) {
+            // [CHANGED] If healthy, explicitly clear the broken flag in memory
+            if ((unit as any).broken_index) {
+                (unit as any).broken_index = 0;
+            }
+            return;
+        }
 
         // 2. HEAL
         const pageText = getPageText();
         if (!pageText) {
-             // If we can't get page text, we can't heal, consider broken for this session
              brokenUnits.push(unit);
              return;
         }
 
-        // Retry Loop for Anchors
         let result = null;
         for (const size of ANCHOR_RETRY_SIZES) {
              result = performAnchorSearch(unit, pageText, size);
-             if (result) break; // Found it!
+             if (result) break; 
         }
 
         if (result) {
@@ -154,23 +161,26 @@ const verifyAndHealUnits = async () => {
             unit.start_char_index = result.start;
             unit.end_char_index = result.end;
             unit.text_content = result.newText;
+            (unit as any).broken_index = 0; // Ensure clean state
 
             updatesToSync.push({
                 id: unit.id,
                 start_char_index: result.start,
                 end_char_index: result.end,
-                text_content: result.newText
+                text_content: result.newText,
+                broken_index: 0
             });
         } else {
             console.warn(`[Healer] Failed Unit ${unit.id} after all attempts.`);
             (unit as any).broken_index = 1;
             updatesToSync.push({ id: unit.id, broken_index: 1 });
-            brokenUnits.push(unit); // [NEW] Add to broken list
+            brokenUnits.push(unit); 
         }
     });
 
-    // [NEW] Render the Footer Alert
+    // [CHANGED] Update footer and Render highlights based on new state
     renderBrokenLinksFooter(brokenUnits);
+    renderHighlights();
 
     if (updatesToSync.length > 0) {
         chrome.runtime.sendMessage({
