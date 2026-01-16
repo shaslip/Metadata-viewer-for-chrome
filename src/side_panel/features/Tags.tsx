@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSelection } from '@/side_panel/context/SelectionContext';
 import { TaxonomyExplorer } from './TaxonomyExplorer';
 import { TagInput, Tag } from '../components/TagInput';
@@ -47,26 +47,41 @@ export const Tags = () => {
   const [isAutoDetected, setIsAutoDetected] = useState(false);
   const [showManualAuthorInput, setShowManualAuthorInput] = useState(false);
 
+  // [NEW] Refs to keep the listener stable and avoid race conditions
+  const editingUnitRef = useRef(editingUnit);
+  const forceRepairModeRef = useRef(forceRepairMode);
+  
+  // We also Ref the handler so the listener can always call the latest version
+  // (Note: handleUnitClick is defined below, but the Ref will capture it after render)
+  const handleUnitClickRef = useRef<(unit: LogicalUnit, fromTree?: boolean) => void>(() => {});
+
+  // [NEW] Sync Refs with State
+  useEffect(() => { editingUnitRef.current = editingUnit; }, [editingUnit]);
+  useEffect(() => { forceRepairModeRef.current = forceRepairMode; }, [forceRepairMode]);
+
   // 1. Listen for clicks/selection
   useEffect(() => {
     const listener = (msg: any) => {
       // CASE A: Standard Click -> Tag Editor
       if (msg.type === 'UNIT_CLICKED' && msg.unit) {
-        setForceRepairMode(false); // Reset
-        handleUnitClick(msg.unit);
+        setForceRepairMode(false); 
+        // Use the Ref to call the latest handler logic
+        handleUnitClickRef.current(msg.unit);
       }
 
-      // [NEW] CASE B: Double Click -> Force Repair Mode
+      // CASE B: Double Click -> Force Repair Mode
       if (msg.type === 'UNIT_DBL_CLICKED' && msg.unit) {
-          handleUnitClick(msg.unit);
-          setForceRepairMode(true); // Override to show Repair UI
-          setRepairSelection(null); // Wait for new selection
+          handleUnitClickRef.current(msg.unit);
+          setForceRepairMode(true); 
+          setRepairSelection(null); 
       }
 
       // CASE C: Text Selected
       if (msg.type === 'TEXT_SELECTED') {
-          // Check if we are in Repair Mode (Broken OR Forced)
-          if (editingUnit?.broken_index || forceRepairMode) {
+          // [CHANGED] Check Refs instead of state variables
+          const isRepairing = editingUnitRef.current?.broken_index || forceRepairModeRef.current;
+
+          if (isRepairing) {
              setRepairSelection({
                  text: msg.text,
                  start: msg.offsets.start,
@@ -90,7 +105,7 @@ export const Tags = () => {
     };
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
-  }, [editingUnit, forceRepairMode]);
+  }, []);
 
   // 2. Handle Create Mode (Reset when new selection made)
   useEffect(() => {
@@ -107,33 +122,31 @@ export const Tags = () => {
       setRefreshKey(prev => prev + 1);
   };
 
-  // Central Handler for Unit Clicks (from Tree or Page)
+  // Central Handler for Unit Clicks
   const handleUnitClick = (unit: LogicalUnit, fromTree = false) => {
         clearSelection();
         setEditingTag(null);
         
-        // CASE 1: Broken Unit (From Tree or Page) -> Always Open Repair Editor
+        // CASE 1: Broken Unit -> Repair
         if (unit.broken_index) {
              setEditingUnit(unit);
              setRepairSelection(null);
-             // No navigation possible
              return; 
         }
 
-        // CASE 2: Healthy Unit Clicked from TREE -> Navigate Only (Do NOT open editor)
+        // CASE 2: Tree Click -> Navigate Only
         if (fromTree) {
-             setEditingUnit(null); // Ensure editor is closed
+             setEditingUnit(null); 
              if (unit.id) {
                  chrome.runtime.sendMessage({ type: 'NAVIGATE_TO_UNIT', unit_id: unit.id, ...unit });
              }
              return;
         }
 
-        // CASE 3: Healthy Unit Clicked from PAGE -> Open Editor & Reveal in Tree
+        // CASE 3: Page Click -> Open Editor
         setEditingUnit(unit);
         setRevealUnitId(unit.id || null);
 
-        // Populate Form Data for Editor
         setAuthor(unit.author || 'Undefined');
         setIsAutoDetected(true); 
         setShowManualAuthorInput(false);
@@ -144,6 +157,8 @@ export const Tags = () => {
             });
         }
   };
+
+  useEffect(() => { handleUnitClickRef.current = handleUnitClick; });
 
   const handleCreate = async () => {
     if (!currentSelection) return;
