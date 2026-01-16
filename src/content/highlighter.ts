@@ -435,35 +435,21 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
     const nodesToWrap: { node: Node, start: number, end: number }[] = [];
 
     if (commonAncestor.nodeType === Node.TEXT_NODE) {
-        nodesToWrap.push({
-            node: commonAncestor,
-            start: range.startOffset,
-            end: range.endOffset
-        });
+        nodesToWrap.push({ node: commonAncestor, start: range.startOffset, end: range.endOffset });
     } else {
         const walker = document.createTreeWalker(
-            commonAncestor,
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: (node) => {
-                    if (range.intersectsNode(node)) return NodeFilter.FILTER_ACCEPT;
-                    return NodeFilter.FILTER_REJECT;
-                }
-            }
+            commonAncestor, NodeFilter.SHOW_TEXT,
+            { acceptNode: (node) => range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }
         );
-
         let currentNode = walker.nextNode();
         while (currentNode) {
             const isStartNode = (currentNode === range.startContainer);
             const isEndNode = (currentNode === range.endContainer);
-            
             const startOffset = isStartNode ? range.startOffset : 0;
             const endOffset = isEndNode ? range.endOffset : (currentNode.textContent?.length || 0);
-
             if (currentNode.textContent && currentNode.textContent.trim().length > 0) {
                  nodesToWrap.push({ node: currentNode, start: startOffset, end: endOffset });
             }
-            
             currentNode = walker.nextNode();
         }
     }
@@ -473,14 +459,14 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
         wrapper.className = `rag-highlight unit-type-${unit.unit_type || 'default'}`;
         wrapper.dataset.unitId = String(unit.id);
         
-        // [NEW] Ensure position is relative so z-index works
+        // Ensure position is relative so z-index works
         wrapper.style.position = 'relative'; 
 
         wrapper.addEventListener('mouseenter', () => {
             const allParts = document.querySelectorAll(`.rag-highlight[data-unit-id="${unit.id}"]`);
             allParts.forEach(el => {
                 el.classList.add('active');
-                // [FIX] Bring hovered item to front so nested inner items are clickable
+                // Bring hovered item to front so nested inner items are clickable
                 (el as HTMLElement).style.zIndex = '999'; 
             });
         });
@@ -489,21 +475,37 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
             const allParts = document.querySelectorAll(`.rag-highlight[data-unit-id="${unit.id}"]`);
             allParts.forEach(el => {
                 el.classList.remove('active');
-                // [FIX] Reset z-index
                 (el as HTMLElement).style.zIndex = 'auto';
             });
         });
 
+        // [CHANGED] Click / Double Click Debounce Logic
+        let clickTimeout: any = null;
+
         wrapper.addEventListener('click', (e) => {
             e.stopPropagation(); 
-            // Standard click: Open Normal Editor (Tags)
-            chrome.runtime.sendMessage({ type: 'UNIT_CLICKED', unit });
+            
+            // If we are already waiting for a double click, do nothing (let the timer handle it)
+            if (clickTimeout) return;
+
+            // Wait 250ms to see if a second click happens
+            clickTimeout = setTimeout(() => {
+                chrome.runtime.sendMessage({ type: 'UNIT_CLICKED', unit });
+                clickTimeout = null;
+            }, 250);
         });
 
-        // [NEW] Double Click: Open Repair/Re-align Editor
         wrapper.addEventListener('dblclick', (e) => {
             e.stopPropagation();
-            e.preventDefault(); // Prevent native selection text-highlighting
+            e.preventDefault(); // Prevent native text selection
+            
+            // Cancel the Single Click timer!
+            if (clickTimeout) {
+                clearTimeout(clickTimeout);
+                clickTimeout = null;
+            }
+
+            // Send ONLY the Double Click event
             chrome.runtime.sendMessage({ type: 'UNIT_DBL_CLICKED', unit });
         });
 
