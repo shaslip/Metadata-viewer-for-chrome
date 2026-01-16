@@ -479,34 +479,10 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
             });
         });
 
-        // [CHANGED] Click / Double Click Debounce Logic
-        let clickTimeout: any = null;
-
+        // [CHANGED] Simple, immediate click handler. Removed Double Click logic.
         wrapper.addEventListener('click', (e) => {
             e.stopPropagation(); 
-            
-            // If we are already waiting for a double click, do nothing (let the timer handle it)
-            if (clickTimeout) return;
-
-            // Wait 250ms to see if a second click happens
-            clickTimeout = setTimeout(() => {
-                chrome.runtime.sendMessage({ type: 'UNIT_CLICKED', unit });
-                clickTimeout = null;
-            }, 250);
-        });
-
-        wrapper.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            e.preventDefault(); // Prevent native text selection
-            
-            // Cancel the Single Click timer!
-            if (clickTimeout) {
-                clearTimeout(clickTimeout);
-                clickTimeout = null;
-            }
-
-            // Send ONLY the Double Click event
-            chrome.runtime.sendMessage({ type: 'UNIT_DBL_CLICKED', unit });
+            chrome.runtime.sendMessage({ type: 'UNIT_CLICKED', unit });
         });
 
         const rangePart = document.createRange();
