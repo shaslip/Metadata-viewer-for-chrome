@@ -547,104 +547,103 @@ export const Tags = () => {
                   </div>
               ) : (
                 /* 2. Normal Edit/Create UI */
-                {editingTag ? (
-                   <div className="space-y-4">
-                       <div>
-                           <label className="block text-xs font-bold text-slate-500 mb-1">Tag Name</label>
-                           <input 
-                               type="text" 
-                               className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                               value={editingTag.label}
-                               onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
-                               autoFocus
-                           />
-                       </div>
+                editingTag ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">Tag Name</label>
+                      <input 
+                        type="text" 
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={editingTag.label}
+                        onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
+                        autoFocus
+                      />
+                    </div>
 
-                       {/* [NEW] Parent Selector */}
-                       <div className="relative">
-                           <label className="block text-xs font-bold text-slate-500 mb-1">Move to Parent (Optional)</label>
-                           
-                           {selectedParent ? (
-                               <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-                                   <div className="flex items-center gap-2">
-                                       <FolderIcon className="w-4 h-4 opacity-50"/>
-                                       {selectedParent.label}
-                                   </div>
-                                   <button onClick={() => { setSelectedParent(null); setParentSearchQuery(''); }}>
-                                       <XMarkIcon className="w-4 h-4"/>
-                                   </button>
-                               </div>
-                           ) : (
-                               <>
-                                   <input 
-                                       type="text" 
-                                       className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                       placeholder="Type to find a parent category..."
-                                       value={parentSearchQuery}
-                                       onChange={(e) => setParentSearchQuery(e.target.value)}
-                                   />
-                                   {/* Suggestions Dropdown */}
-                                   {parentSuggestions.length > 0 && (
-                                       <ul className="absolute bottom-full mb-1 left-0 w-full bg-white border border-slate-200 rounded shadow-lg max-h-40 overflow-y-auto z-50">
-                                           {parentSuggestions.map(s => (
-                                               <li 
-                                                   key={s.id} 
-                                                   className="px-3 py-2 text-sm hover:bg-slate-50 cursor-pointer flex items-center gap-2"
-                                                   onClick={() => {
-                                                       setSelectedParent({ id: s.id, label: s.label });
-                                                       setParentSuggestions([]);
-                                                   }}
-                                               >
-                                                   <FolderIcon className="w-4 h-4 text-slate-400"/>
-                                                   {s.label}
-                                               </li>
-                                           ))}
-                                       </ul>
-                                   )}
-                               </>
-                           )}
-                           <p className="text-[10px] text-slate-400 mt-1">
-                               Selected parent will be applied on save. Leave empty to keep current location.
-                           </p>
-                       </div>
-                   </div>
-               </div>
-                ) : (
-                    <>
-                      {/* Author Selection */}
-                      {!editingUnit && (
-                          <div className="mb-4">
-                               {isAutoDetected ? (
-                                   <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                        Author: {author}
-                                   </div>
-                               ) : (
-                                   <div>
-                                       <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Author</label>
-                                       {showManualAuthorInput ? (
-                                           <div className="relative">
-                                               <input type="text" className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" value={author === 'Undefined' ? '' : author} onChange={(e) => setAuthor(e.target.value)} placeholder="Enter Author Name..." autoFocus />
-                                               <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-                                               <button onClick={() => { setShowManualAuthorInput(false); setAuthor('Undefined'); }} className="absolute right-2 top-2 text-xs text-blue-600 hover:underline">Cancel</button>
-                                           </div>
-                                       ) : (
-                                           <div className="relative">
-                                               <select className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white" value={author} onChange={(e) => { if (e.target.value === 'OTHER_MANUAL') { setShowManualAuthorInput(true); setAuthor(''); } else { setAuthor(e.target.value); } }}>
-                                                   <option value="Undefined" disabled>Select an Author...</option>
-                                                   {CANONICAL_AUTHORS.map(name => <option key={name} value={name}>{name}</option>)}
-                                                   <option value="OTHER_MANUAL">Other...</option>
-                                               </select>
-                                               <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-                                               <ChevronDownIcon className="absolute right-2.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
-                                           </div>
-                                       )}
-                                   </div>
-                               )}
-                          </div>
-                      )}
+                    {/* [NEW] Parent Selector */}
+                    <div className="relative">
+                      <label className="block text-xs font-bold text-slate-500 mb-1">Move to Parent (Optional)</label>
                       
-                      <TagInput tags={selectedTags} onChange={setSelectedTags} />
-                    </>
+                      {selectedParent ? (
+                        <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                          <div className="flex items-center gap-2">
+                            <FolderIcon className="w-4 h-4 opacity-50"/>
+                            {selectedParent.label}
+                          </div>
+                          <button onClick={() => { setSelectedParent(null); setParentSearchQuery(''); }}>
+                            <XMarkIcon className="w-4 h-4"/>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <input 
+                            type="text" 
+                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            placeholder="Type to find a parent category..."
+                            value={parentSearchQuery}
+                            onChange={(e) => setParentSearchQuery(e.target.value)}
+                          />
+                          {/* Suggestions Dropdown */}
+                          {parentSuggestions.length > 0 && (
+                            <ul className="absolute bottom-full mb-1 left-0 w-full bg-white border border-slate-200 rounded shadow-lg max-h-40 overflow-y-auto z-50">
+                              {parentSuggestions.map(s => (
+                                <li 
+                                  key={s.id} 
+                                  className="px-3 py-2 text-sm hover:bg-slate-50 cursor-pointer flex items-center gap-2"
+                                  onClick={() => {
+                                    setSelectedParent({ id: s.id, label: s.label });
+                                    setParentSuggestions([]);
+                                  }}
+                                >
+                                  <FolderIcon className="w-4 h-4 text-slate-400"/>
+                                  {s.label}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      )}
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Selected parent will be applied on save. Leave empty to keep current location.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Author Selection */}
+                    {!editingUnit && (
+                      <div className="mb-4">
+                        {isAutoDetected ? (
+                          <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                            Author: {author}
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Author</label>
+                            {showManualAuthorInput ? (
+                              <div className="relative">
+                                <input type="text" className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" value={author === 'Undefined' ? '' : author} onChange={(e) => setAuthor(e.target.value)} placeholder="Enter Author Name..." autoFocus />
+                                <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
+                                <button onClick={() => { setShowManualAuthorInput(false); setAuthor('Undefined'); }} className="absolute right-2 top-2 text-xs text-blue-600 hover:underline">Cancel</button>
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <select className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white" value={author} onChange={(e) => { if (e.target.value === 'OTHER_MANUAL') { setShowManualAuthorInput(true); setAuthor(''); } else { setAuthor(e.target.value); } }}>
+                                  <option value="Undefined" disabled>Select an Author...</option>
+                                  {CANONICAL_AUTHORS.map(name => <option key={name} value={name}>{name}</option>)}
+                                  <option value="OTHER_MANUAL">Other...</option>
+                                </select>
+                                <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
+                                <ChevronDownIcon className="absolute right-2.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <TagInput tags={selectedTags} onChange={setSelectedTags} />
+                  </>
                 )
               )}
            </div>
