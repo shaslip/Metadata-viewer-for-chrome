@@ -1,15 +1,15 @@
-import React, { useState, KeyboardEvent, useEffect } from 'react';
+import React, { useState, KeyboardEvent, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom'; // [NEW] Needed to escape the scroll container
 import { useApi } from '@/hooks/useApi';
 import { UserIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
-// Define the shape here or import from types
 export interface Tag {
   id: number;
   label: string;
 }
 
 interface Props {
-  tags: Tag[]; // CHANGED: Now accepts full objects, not just IDs
+  tags: Tag[];
   onChange: (tags: Tag[]) => void;
   disabled?: boolean;
 }
@@ -18,8 +18,12 @@ export const TagInput: React.FC<Props> = ({ tags, onChange, disabled }) => {
   const { get, post } = useApi();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Tag[]>([]);
+  
+  // [NEW] Ref and State for positioning the portal
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ bottom: 0, left: 0, width: 0 });
 
-  // 1. Search (My Tags Only)
+  // 1. Search
   useEffect(() => {
     if (disabled || query.length < 1) {
       setSuggestions([]);
@@ -36,6 +40,19 @@ export const TagInput: React.FC<Props> = ({ tags, onChange, disabled }) => {
     return () => clearTimeout(timer);
   }, [query, disabled]);
 
+  // [NEW] Update dropdown position whenever query changes (menu appears)
+  useEffect(() => {
+    if (query && inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setDropdownPos({
+            // Calculate distance from bottom of screen to top of input
+            bottom: window.innerHeight - rect.top + 4, 
+            left: rect.left,
+            width: rect.width
+        });
+    }
+  }, [query]);
+
   // 2. Create New Tag
   const createTag = async (label: string) => {
     if (disabled) return;
@@ -49,12 +66,8 @@ export const TagInput: React.FC<Props> = ({ tags, onChange, disabled }) => {
   };
 
   const handleSelect = (tag: Tag) => {
-    // Prevent duplicates
     if (tags.some(t => t.id === tag.id)) return;
-    
-    // Bubbling up the full object immediately
     onChange([...tags, tag]);
-    
     setQuery('');
     setSuggestions([]);
   };
@@ -77,6 +90,39 @@ export const TagInput: React.FC<Props> = ({ tags, onChange, disabled }) => {
       }
     }
   };
+
+  // [NEW] Render the dropdown contents (for Portal)
+  const dropdownContent = (
+    <ul 
+        className="fixed z-[9999] bg-white border border-slate-200 rounded-md shadow-xl max-h-48 overflow-y-auto"
+        style={{
+            left: dropdownPos.left,
+            bottom: dropdownPos.bottom,
+            width: dropdownPos.width,
+        }}
+    >
+      {suggestions.map((tag) => (
+        <li 
+          key={tag.id}
+          onClick={() => handleSelect(tag)}
+          className="px-3 py-2 text-sm hover:bg-slate-50 cursor-pointer text-slate-700 flex items-center"
+        >
+          <UserIcon className="w-4 h-4 text-slate-400 mr-2" />
+          {tag.label}
+        </li>
+      ))}
+
+      {!suggestions.some(s => s.label.toLowerCase() === query.toLowerCase()) && (
+        <li 
+          onClick={() => createTag(query)}
+          className="px-3 py-2 text-sm bg-blue-50 text-blue-700 cursor-pointer hover:bg-blue-100 font-semibold flex items-center border-t border-blue-100"
+        >
+          <PlusIcon className="w-4 h-4 mr-2" />
+          Create "{query}"
+        </li>
+      )}
+    </ul>
+  );
 
   return (
     <div>
@@ -101,10 +147,10 @@ export const TagInput: React.FC<Props> = ({ tags, onChange, disabled }) => {
         ))}
       </div>
 
-      {/* [CHANGED] Wrapped Input + Dropdown in relative container to anchor the pop-up correctly */}
       <div className="relative">
           {/* Input */}
           <input
+            ref={inputRef} // [NEW] Attach ref here
             type="text"
             className="w-full p-2 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
             placeholder={disabled ? "Locked" : "Type to search or create..."}
@@ -114,31 +160,8 @@ export const TagInput: React.FC<Props> = ({ tags, onChange, disabled }) => {
             disabled={disabled}
           />
 
-          {/* Dropdown (Popping UPWARDS) */}
-          {!disabled && query && (
-            <ul className="absolute z-20 w-full bg-white border border-slate-200 rounded-md shadow-xl mb-1 bottom-full max-h-48 overflow-y-auto">
-              {suggestions.map((tag) => (
-                <li 
-                  key={tag.id}
-                  onClick={() => handleSelect(tag)}
-                  className="px-3 py-2 text-sm hover:bg-slate-50 cursor-pointer text-slate-700 flex items-center"
-                >
-                  <UserIcon className="w-4 h-4 text-slate-400 mr-2" />
-                  {tag.label}
-                </li>
-              ))}
-
-              {!suggestions.some(s => s.label.toLowerCase() === query.toLowerCase()) && (
-                <li 
-                  onClick={() => createTag(query)}
-                  className="px-3 py-2 text-sm bg-blue-50 text-blue-700 cursor-pointer hover:bg-blue-100 font-semibold flex items-center border-t border-blue-100"
-                >
-                  <PlusIcon className="w-4 h-4 mr-2" />
-                  Create "{query}"
-                </li>
-              )}
-            </ul>
-          )}
+          {/* [NEW] Render via Portal to Body */}
+          {!disabled && query && createPortal(dropdownContent, document.body)}
       </div>
     </div>
   );
