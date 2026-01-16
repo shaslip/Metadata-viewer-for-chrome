@@ -11,6 +11,7 @@ export interface LogicalUnit {
   source_page_id?: number;
   title?: string;
   created_by?: number;
+  broken_index?: number;
 }
 
 export interface PageMetadata {
