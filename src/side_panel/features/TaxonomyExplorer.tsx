@@ -3,9 +3,9 @@ import { useApi } from '@/hooks/useApi';
 import { DefinedTag, LogicalUnit } from '@/utils/types';
 import { 
     ChevronRightIcon, ChevronDownIcon, UserIcon, 
-    BuildingLibraryIcon, TrashIcon, Bars2Icon 
+    BuildingLibraryIcon, TrashIcon, Bars2Icon, ExclamationTriangleIcon 
 } from '@heroicons/react/24/solid';
-import { 
+import {
     DndContext, 
     useDraggable, 
     useDroppable, 
@@ -32,11 +32,12 @@ interface Props {
     onTreeChange: (changes: {id: number, parent_id: number | null}[]) => void;
     onDeleteTag: (tag: DefinedTag, hasChildren: boolean) => void;
     onEditTag: (tag: DefinedTag) => void;
+    onUnitClick: (unit: LogicalUnit) => void;
 }
 
 export const TaxonomyExplorer: React.FC<Props> = ({ 
     filter, viewMode, revealUnitId, refreshKey, 
-    onTagSelect, isSelectionMode, isEditMode, onTreeChange, onDeleteTag, onEditTag 
+    onTagSelect, isSelectionMode, isEditMode, onTreeChange, onDeleteTag, onEditTag, onUnitClick
 }) => {
   const { get } = useApi();
   const [tree, setTree] = useState<TreeNode[]>([]);
@@ -191,6 +192,7 @@ export const TaxonomyExplorer: React.FC<Props> = ({
                isSelectionMode={isSelectionMode}
                isExpanded={node.forceExpand || false}
                onToggleExpand={handleToggleExpand}
+               onUnitClick={onUnitClick}
              />
            ))}
         </div>
@@ -226,7 +228,7 @@ const RootDropZone = () => {
 };
 
 const TaxonomyNode = ({ 
-    node, isEditMode, onDeleteTag, onEditTag, highlightUnitId, refreshKey, onTagSelect, isSelectionMode, isExpanded, onToggleExpand
+    node, isEditMode, onDeleteTag, onEditTag, highlightUnitId, refreshKey, onTagSelect, isSelectionMode, isExpanded, onToggleExpand, onUnitClick
 }: any) => {
     const { get } = useApi();
     const [units, setUnits] = useState<LogicalUnit[]>([]);
@@ -336,27 +338,41 @@ const TaxonomyNode = ({
                             onTagSelect={onTagSelect}
                             isSelectionMode={isSelectionMode}
                             isExpanded={child.forceExpand || false}
-                            onToggleExpand={onToggleExpand} 
+                            onToggleExpand={onToggleExpand}
+                            onUnitClick={onUnitClick}
                         />
                     ))}
                     
-                    {!isEditMode && units.map((u: LogicalUnit) => {
+                    {!isEditMode && units.map((u: any) => {
                         const isActive = highlightUnitId === u.id;
+                        const isBroken = u.broken_index === 1;
                         return (
                             <div 
                                 key={u.id}
-                                // [NEW] Attach Ref if this is the active unit
                                 ref={isActive ? activeUnitRef : null}
                                 className={`flex items-center ml-0 text-xs py-1 px-1 mb-1 rounded cursor-pointer truncate transition-all duration-500 ${
                                     isActive 
                                     ? 'bg-yellow-100 text-yellow-800 font-bold border border-yellow-300' 
                                     : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
                                 }`}
-                                onClick={() => chrome.runtime.sendMessage({ type: 'NAVIGATE_TO_UNIT', unit_id: u.id, ...u })}
+                                onClick={() => onUnitClick(u)} // [NEW] Use handler instead of direct message
                             >
                                 <span className="w-4 inline-block flex-shrink-0"></span>
-                                <span className="mr-1">📄</span>
-                                <span className="truncate">{u.text_content.substring(0, 30)}...</span>
+                                
+                                {/* [NEW] Logic for Broken Icon/Style */}
+                                {isBroken ? (
+                                    <>
+                                        <ExclamationTriangleIcon className="w-3 h-3 text-red-500 mr-1" />
+                                        <span className="truncate border-b-2 border-red-400 border-dotted" title="Broken Link - Click to Repair">
+                                            {u.text_content.substring(0, 30)}...
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="mr-1">📄</span>
+                                        <span className="truncate">{u.text_content.substring(0, 30)}...</span>
+                                    </>
+                                )}
                             </div>
                         );
                     })}
