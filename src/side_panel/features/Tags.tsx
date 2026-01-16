@@ -460,33 +460,23 @@ export const Tags = () => {
                       <div className="text-xs text-slate-500">
                           {editingUnit?.broken_index 
                              ? "This highlight cannot be found. Select text to repair." 
-                             : "Select text on the page to update the highlighted range."}
+                             : "Select the correct text on the page to update the start/end offsets."}
                       </div>
 
-                      {/* [FIX] Only show Original Text if we actually have the unit (now we should) */}
-                      {editingUnit && (
-                          <div className="opacity-75">
-                              <label className="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase">Original Text</label>
-                              <div className="text-xs text-slate-500 italic border-l-2 border-slate-200 pl-2 line-clamp-3">
-                                  "{editingUnit.text_content}"
-                              </div>
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 mb-1">ORIGINAL TEXT</label>
+                          <div className="p-2 bg-slate-100 border border-slate-200 rounded text-sm text-slate-600 italic">
+                              "{editingUnit?.text_content}"
                           </div>
-                      )}
+                      </div>
 
                       <div>
-                          <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">New Selection</label>
+                          <label className="block text-xs font-bold text-slate-400 mb-1">NEW SELECTION</label>
                           {repairSelection ? (
                               <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
                                   "{repairSelection.text}"
                               </div>
                           ) : (
-                              <div className="p-3 border border-dashed border-slate-300 rounded text-xs text-slate-400 text-center">
-                                  Waiting for selection...
-                              </div>
-                          )}
-                      </div>
-                  </div>
-              ) : (
                               <div className="p-2 border border-dashed border-slate-300 rounded text-sm text-slate-400 text-center py-4">
                                   Waiting for you to select text on the page...
                               </div>
