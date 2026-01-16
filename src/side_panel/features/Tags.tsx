@@ -47,15 +47,14 @@ export const Tags = () => {
   const [isAutoDetected, setIsAutoDetected] = useState(false);
   const [showManualAuthorInput, setShowManualAuthorInput] = useState(false);
 
-  // [NEW] Refs to keep the listener stable and avoid race conditions
+  // Refs to keep the listener stable
   const editingUnitRef = useRef(editingUnit);
   const forceRepairModeRef = useRef(forceRepairMode);
   
-  // We also Ref the handler so the listener can always call the latest version
-  // (Note: handleUnitClick is defined below, but the Ref will capture it after render)
+  // Ref handler
   const handleUnitClickRef = useRef<(unit: LogicalUnit, fromTree?: boolean) => void>(() => {});
 
-  // [NEW] Sync Refs with State
+  // Sync Refs with State
   useEffect(() => { editingUnitRef.current = editingUnit; }, [editingUnit]);
   useEffect(() => { forceRepairModeRef.current = forceRepairMode; }, [forceRepairMode]);
 
@@ -65,13 +64,14 @@ export const Tags = () => {
       // CASE A: Standard Click -> Tag Editor
       if (msg.type === 'UNIT_CLICKED' && msg.unit) {
         setForceRepairMode(false); 
-        // Use the Ref to call the latest handler logic
         handleUnitClickRef.current(msg.unit);
       }
 
-      // CASE Text Selected
+      // [REMOVED] Double Click logic is gone.
+
+      // CASE B: Text Selected
       if (msg.type === 'TEXT_SELECTED') {
-          // [CHANGED] Check Refs instead of state variables
+          // Check Refs instead of state variables
           const isRepairing = editingUnitRef.current?.broken_index || forceRepairModeRef.current;
 
           if (isRepairing) {
@@ -426,8 +426,7 @@ export const Tags = () => {
                     {isRepairView ? <ArrowPathIcon className="w-5 h-5" /> : <CheckIcon className="w-5 h-5" />}
                 </button>
 
-                {/* [NEW] Manual Edit / Re-Align Button */}
-                {/* Only show if we have a unit, it's NOT broken (broken ones auto-show repair), and we aren't already editing it */}
+                {/* Manual Edit / Re-Align Button */}
                 {editingUnit && !editingUnit.broken_index && !isRepairView && (
                     <button 
                         onClick={() => { setForceRepairMode(true); setRepairSelection(null); }}
@@ -455,16 +454,18 @@ export const Tags = () => {
            <div className="p-4 overflow-y-auto">
               
               {/* 1. Repair Mode UI */}
-              {editingUnit?.broken_index ? (
+              {isRepairView ? (
                   <div className="space-y-4">
                       <div className="text-xs text-slate-500">
-                          This highlight cannot be found on the page. Please find the text below and select it to repair the link.
+                          {editingUnit?.broken_index 
+                             ? "This highlight cannot be found. Select text to repair." 
+                             : "Select the correct text on the page to update the start/end offsets."}
                       </div>
 
                       <div>
                           <label className="block text-xs font-bold text-slate-400 mb-1">ORIGINAL TEXT</label>
                           <div className="p-2 bg-slate-100 border border-slate-200 rounded text-sm text-slate-600 italic">
-                              "{editingUnit.text_content}"
+                              "{editingUnit?.text_content}"
                           </div>
                       </div>
 
