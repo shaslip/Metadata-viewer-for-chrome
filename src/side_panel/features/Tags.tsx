@@ -102,12 +102,13 @@ export const Tags = () => {
 
   // 2. Handle Create Mode (Reset when new selection made)
   useEffect(() => {
-    if (currentSelection) {
+    // [FIX] Do NOT reset if we are in Repair Mode!
+    if (currentSelection && !forceRepairMode && !editingUnit?.broken_index) {
       setEditingUnit(null); 
       setEditingTag(null);
       setSelectedTags([]); 
     }
-  }, [currentSelection]);
+  }, [currentSelection, forceRepairMode, editingUnit]);
 
   // Helper
   const triggerRefresh = () => {
@@ -420,10 +421,10 @@ export const Tags = () => {
                         (editingTag ? handleRename : (editingUnit ? handleUpdate : handleCreate))
                     }
                     disabled={isSaving || (isRepairView && !repairSelection)} 
-                    className={`p-1 rounded disabled:opacity-50 ${isRepairView ? 'text-red-600 hover:bg-red-100' : 'text-green-600 hover:bg-green-50'}`} 
+                    className={`p-1 rounded disabled:opacity-50 ${isRepairView ? 'text-green-600 hover:bg-green-50' : 'text-green-600 hover:bg-green-50'}`} 
                     title={isRepairView ? "Confirm Repair" : "Save"}
                 >
-                    {isRepairView ? <ArrowPathIcon className="w-5 h-5" /> : <CheckIcon className="w-5 h-5" />}
+                    <CheckIcon className="w-5 h-5" />
                 </button>
 
                 {/* Manual Edit / Re-Align Button */}
