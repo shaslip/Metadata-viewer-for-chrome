@@ -6,7 +6,8 @@ import { useApi } from '@/hooks/useApi';
 import { 
     MagnifyingGlassIcon, UserIcon, BuildingLibraryIcon, 
     TrashIcon, PencilSquareIcon, CheckIcon, XMarkIcon,
-    ChevronDownIcon, ExclamationTriangleIcon, ArrowPathIcon
+    ChevronDownIcon, ExclamationTriangleIcon, ArrowPathIcon,
+    FolderIcon
 } from '@heroicons/react/24/solid';
 import { LogicalUnit, DefinedTag } from '@/utils/types';
 
@@ -37,6 +38,11 @@ export const Tags = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [revealUnitId, setRevealUnitId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // State for Parent Selection in Modify Mode
+  const [parentSearchQuery, setParentSearchQuery] = useState('');
+  const [parentSuggestions, setParentSuggestions] = useState<DefinedTag[]>([]);
+  const [selectedParent, setSelectedParent] = useState<{id: number, label: string} | null>(null);
 
   // Repair State
   const [repairSelection, setRepairSelection] = useState<{text: string, start: number, end: number} | null>(null);
@@ -213,15 +219,59 @@ export const Tags = () => {
     }
   };
 
-  const handleRename = async () => {
+  // [NEW] Search for parents when user types in Modify Pane
+  useEffect(() => {
+    if (!editingTag || !parentSearchQuery) {
+        setParentSuggestions([]);
+        return;
+    }
+    const timer = setTimeout(async () => {
+        try {
+            // Re-use existing tag search API
+            const results = await get(`/api/tags?search=${encodeURIComponent(parentSearchQuery)}&scope=mine`);
+            // Filter out self to prevent self-parenting
+            setParentSuggestions(results.filter((t: any) => t.id !== editingTag.id));
+        } catch (e) { console.error(e); }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [parentSearchQuery, editingTag]);
+
+  // [NEW] Quick Create from Tree Filter
+  const handleQuickCreate = async (label: string) => {
+    if (!label.trim()) return;
+    setIsSaving(true);
+    try {
+        await post('/api/tags', { label: label, is_official: 0 });
+        setFilterText(''); // Clear filter to show new tag
+        triggerRefresh();
+    } catch (e) {
+        alert("Failed to create tag.");
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  // [CHANGED] Combined Rename + Move Logic
+  const handleModifyTag = async () => {
       if (!editingTag || !editingTag.label.trim()) return;
       setIsSaving(true);
       try {
+          // 1. Update Label
           await put(`/api/tags/${editingTag.id}`, { label: editingTag.label });
+
+          // 2. Update Parent (if selected)
+          if (selectedParent) {
+              await put('/api/tags/hierarchy', { 
+                  updates: [{ id: editingTag.id, parent_id: selectedParent.id }] 
+              });
+          }
+
           setEditingTag(null);
+          setSelectedParent(null); // Reset
+          setParentSearchQuery(''); // Reset
           setRefreshKey(prev => prev + 1);
       } catch (e: any) {
-          alert(e.message || "Failed to rename");
+          alert(e.message || "Failed to modify tag");
       } finally {
           setIsSaving(false);
       }
@@ -315,6 +365,14 @@ export const Tags = () => {
   const isEditorVisible = !!currentSelection || !!editingUnit || !!editingTag;
   const isRepairView = !!editingUnit?.broken_index || forceRepairMode;
 
+  // Clear editingTag when exiting edit mode
+  const handleCancelEditMode = () => {
+      setIsEditMode(false);
+      setEditingTag(null); // <--- FIX ADDED HERE
+      setRefreshKey(prev => prev + 1);
+      setTreeChanges([]);
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50">
       
@@ -373,7 +431,7 @@ export const Tags = () => {
                             <CheckIcon className="w-4 h-4" />
                         </button>
                         <button 
-                            onClick={() => { setIsEditMode(false); setRefreshKey(prev => prev + 1); setTreeChanges([]); }} 
+                            onClick={handleCancelEditMode} 
                             className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 rounded transition-colors"
                             title="Cancel Editing"
                         >
@@ -398,7 +456,8 @@ export const Tags = () => {
             onTreeChange={setTreeChanges}
             onDeleteTag={handleTagDeleteRequest}
             onEditTag={setEditingTag}
-            onUnitClick={handleUnitClick} 
+            onUnitClick={handleUnitClick}
+            onCreateTag={handleQuickCreate}
         />
       </div>
 
@@ -410,7 +469,7 @@ export const Tags = () => {
            <div className={`flex items-center justify-between px-4 py-2 border-b border-slate-200 ${editingUnit?.broken_index ? 'bg-red-50' : 'bg-slate-50'}`}>
               <span className={`text-xs font-bold uppercase ${editingUnit?.broken_index ? 'text-red-600 flex items-center gap-1' : 'text-slate-500'}`}>
                 {editingUnit?.broken_index && <ExclamationTriangleIcon className="w-4 h-4" />}
-                {editingUnit?.broken_index ? "Repair Broken Highlight" : (editingTag ? "Rename Tag" : (editingUnit ? "Edit Highlight" : "New Highlight"))}
+                {editingUnit?.broken_index ? "Repair Broken Highlight" : (editingTag ? "Modify Tag" : (editingUnit ? "Edit Highlight" : "New Highlight"))}
               </span>
               
               <div className="flex items-center gap-1">
@@ -418,7 +477,7 @@ export const Tags = () => {
                 <button 
                     onClick={
                         isRepairView ? handleRepair : 
-                        (editingTag ? handleRename : (editingUnit ? handleUpdate : handleCreate))
+                        (editingTag ? handleModifyTag : (editingUnit ? handleUpdate : handleCreate))
                     }
                     disabled={isSaving || (isRepairView && !repairSelection)} 
                     className={`p-1 rounded disabled:opacity-50 ${isRepairView ? 'text-green-600 hover:bg-green-50' : 'text-green-600 hover:bg-green-50'}`} 
