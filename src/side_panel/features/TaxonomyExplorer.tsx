@@ -3,7 +3,8 @@ import { useApi } from '@/hooks/useApi';
 import { DefinedTag, LogicalUnit } from '@/utils/types';
 import { 
     ChevronRightIcon, ChevronDownIcon, UserIcon, 
-    BuildingLibraryIcon, TrashIcon, Bars2Icon, ExclamationTriangleIcon 
+    BuildingLibraryIcon, TrashIcon, Bars2Icon, ExclamationTriangleIcon,
+    PlusIcon
 } from '@heroicons/react/24/solid';
 import {
     DndContext, 
@@ -33,11 +34,13 @@ interface Props {
     onDeleteTag: (tag: DefinedTag, hasChildren: boolean) => void;
     onEditTag: (tag: DefinedTag) => void;
     onUnitClick: (unit: LogicalUnit, fromTree?: boolean) => void;
+    onCreateTag: (label: string) => void;
 }
 
 export const TaxonomyExplorer: React.FC<Props> = ({ 
     filter, viewMode, revealUnitId, refreshKey, 
-    onTagSelect, isSelectionMode, isEditMode, onTreeChange, onDeleteTag, onEditTag, onUnitClick
+    onTagSelect, isSelectionMode, isEditMode, onTreeChange, 
+    onDeleteTag, onEditTag, onUnitClick, onCreateTag
 }) => {
   const { get } = useApi();
   const [tree, setTree] = useState<TreeNode[]>([]);
@@ -174,27 +177,42 @@ export const TaxonomyExplorer: React.FC<Props> = ({
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="pb-10 px-2"> 
-           {/* [NEW] Root Drop Zone - Visible only in Edit Mode */}
            {isEditMode && <RootDropZone />}
 
-           {displayTree.length === 0 && <div className="p-4 text-sm text-slate-400">No tags found.</div>}
-           
-           {displayTree.map(node => (
-             <TaxonomyNode 
-               key={node.id} 
-               node={node} 
-               isEditMode={isEditMode}
-               onDeleteTag={onDeleteTag}
-               onEditTag={onEditTag}
-               highlightUnitId={revealUnitId}
-               refreshKey={refreshKey}
-               onTagSelect={onTagSelect}
-               isSelectionMode={isSelectionMode}
-               isExpanded={node.forceExpand || false}
-               onToggleExpand={handleToggleExpand}
-               onUnitClick={onUnitClick}
-             />
-           ))}
+           {/* [CHANGED] Display Tree Logic */}
+           {displayTree.length === 0 ? (
+               <div className="flex flex-col items-center justify-center p-6 text-center">
+                   <p className="text-sm text-slate-400 mb-3">No tags found.</p>
+                   
+                   {/* [NEW] Create Button appears only when filtering */}
+                   {filter.trim().length > 0 && (
+                       <button 
+                           onClick={() => onCreateTag(filter)}
+                           className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors border border-blue-200"
+                       >
+                           <PlusIcon className="w-4 h-4" />
+                           Create "{filter}"
+                       </button>
+                   )}
+               </div>
+           ) : (
+               displayTree.map(node => (
+                   <TaxonomyNode 
+                     key={node.id} 
+                     node={node} 
+                     isEditMode={isEditMode}
+                     onDeleteTag={onDeleteTag}
+                     onEditTag={onEditTag}
+                     highlightUnitId={revealUnitId}
+                     refreshKey={refreshKey}
+                     onTagSelect={onTagSelect}
+                     isSelectionMode={isSelectionMode}
+                     isExpanded={node.forceExpand || false}
+                     onToggleExpand={handleToggleExpand}
+                     onUnitClick={onUnitClick}
+                   />
+               ))
+           )}
         </div>
         
         <DragOverlay>
