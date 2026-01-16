@@ -346,6 +346,7 @@ const TaxonomyNode = ({
                     {!isEditMode && units.map((u: any) => {
                         const isActive = highlightUnitId === u.id;
                         const isBroken = u.broken_index === 1;
+
                         return (
                             <div 
                                 key={u.id}
@@ -355,11 +356,11 @@ const TaxonomyNode = ({
                                     ? 'bg-yellow-100 text-yellow-800 font-bold border border-yellow-300' 
                                     : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
                                 }`}
-                                onClick={() => onUnitClick(u)} // [NEW] Use handler instead of direct message
+                                // [CHANGED] Pass 'true' to indicate this click originated from the Tree
+                                onClick={() => onUnitClick(u, true)} 
                             >
                                 <span className="w-4 inline-block flex-shrink-0"></span>
                                 
-                                {/* [NEW] Logic for Broken Icon/Style */}
                                 {isBroken ? (
                                     <>
                                         <ExclamationTriangleIcon className="w-3 h-3 text-red-500 mr-1" />
