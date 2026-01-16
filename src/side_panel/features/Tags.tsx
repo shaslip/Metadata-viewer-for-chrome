@@ -326,12 +326,29 @@ export const Tags = () => {
               <span className="text-xs font-bold text-slate-500 uppercase">
                 {editingTag ? "Rename Tag" : (editingUnit ? "Edit Highlight" : "New Highlight")}
               </span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-1">
+                
+                {/* [NEW] Save / Update Button (Green Checkmark) */}
+                {/* Only show for Unit editing/creation, OR if renaming a tag */}
+                <button 
+                    onClick={editingTag ? handleRename : (editingUnit ? handleUpdate : handleCreate)}
+                    disabled={isSaving}
+                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 disabled:opacity-50" 
+                    title={editingTag ? "Save Name" : (editingUnit ? "Update Tags" : "Save Highlight")}
+                >
+                    <CheckIcon className="w-5 h-5" />
+                </button>
+
+                {/* Existing: Delete Button (Red Trash) */}
                 {editingUnit && (
-                    <button onClick={handleDelete} className="text-red-500 hover:text-red-700 p-1" title="Delete">
-                        <TrashIcon className="w-4 h-4" />
+                    <button onClick={handleDelete} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Delete">
+                        <TrashIcon className="w-5 h-5" />
                     </button>
                 )}
+                
+                {/* Divider */}
+                <div className="h-4 w-px bg-slate-300 mx-1"></div>
+
                 <button onClick={closeBottomPane} className="text-slate-400 hover:text-slate-600 font-bold text-lg leading-none px-1">
                     &times;
                 </button>
@@ -354,27 +371,19 @@ export const Tags = () => {
                               onKeyDown={(e) => e.key === 'Enter' && handleRename()}
                           />
                       </div>
-                      <div className="flex justify-end">
-                          <button 
-                             onClick={handleRename}
-                             disabled={isSaving || !editingTag.label.trim()}
-                             className="bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded shadow hover:bg-blue-700 disabled:opacity-50"
-                          >
-                             {isSaving ? 'Saving...' : 'Rename'}
-                          </button>
-                      </div>
+                      {/* Removed old bottom button for Tag Renaming to keep consistency, 
+                          saving is now done via the Checkmark in header or Enter key */}
                   </div>
               ) : (
                   /* CONDITION: Editing Unit (Snippet) */
                   <>
                       {/* [NEW] Author Selection Logic */}
-                      {/* Only show if we are Creating New (not editing existing, though you can enable it for both if you want) */}
                       {!editingUnit && (
                           <div className="mb-4">
                                {isAutoDetected ? (
                                    // A. Auto-Detected: Minimalist
                                    <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                       Author: {author}
+                                        Author: {author}
                                    </div>
                                ) : (
                                    // B. Manual Selection
@@ -382,7 +391,7 @@ export const Tags = () => {
                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Author</label>
                                        
                                        {showManualAuthorInput ? (
-                                           // C. Free Text Input (if "Other" was clicked)
+                                           // C. Free Text Input
                                            <div className="relative">
                                                <input 
                                                    type="text" 
@@ -397,7 +406,7 @@ export const Tags = () => {
                                                     onClick={() => { setShowManualAuthorInput(false); setAuthor('Undefined'); }}
                                                     className="absolute right-2 top-2 text-xs text-blue-600 hover:underline"
                                                >
-                                                   Cancel
+                                                    Cancel
                                                </button>
                                            </div>
                                        ) : (
@@ -431,16 +440,6 @@ export const Tags = () => {
                       )}
 
                       <TagInput tags={selectedTags} onChange={setSelectedTags} />
-                      
-                      <div className="mt-4 flex justify-end">
-                         <button 
-                            onClick={editingUnit ? handleUpdate : handleCreate}
-                            disabled={isSaving}
-                            className="bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded shadow hover:bg-blue-700 disabled:opacity-50"
-                         >
-                            {isSaving ? 'Saving...' : (editingUnit ? 'Update Tags' : 'Save')}
-                         </button>
-                      </div>
                   </>
               )}
            </div>
