@@ -278,7 +278,8 @@ const renderBrokenLinksFooter = (brokenUnits: LogicalUnit[]) => {
 };
 
 const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: number) => {
-    const originalText = unit.text_content;
+    // [CHANGED] Normalize inputs for search context
+    const originalText = normalize(unit.text_content); 
     const originalStart = unit.start_char_index;
 
     // Safety: Don't use anchors larger than half the text
@@ -289,10 +290,14 @@ const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: nu
     const headAnchor = originalText.substring(0, anchorSize);
     const tailAnchor = originalText.substring(originalText.length - anchorSize);
 
+    // [CHANGED] Create a normalized version of the page text for searching
+    // Since replacing smart quotes with ASCII quotes doesn't change string length, indices remain valid.
+    const searchablePageText = normalize(pageText);
+
     // Define Neighborhood
     const searchStart = Math.max(0, originalStart - SEARCH_RADIUS);
-    const searchEnd = Math.min(pageText.length, originalStart + originalText.length + SEARCH_RADIUS);
-    const neighborhood = pageText.substring(searchStart, searchEnd);
+    const searchEnd = Math.min(searchablePageText.length, originalStart + originalText.length + SEARCH_RADIUS);
+    const neighborhood = searchablePageText.substring(searchStart, searchEnd);
 
     // Helper: Find all occurrences of a string in a text block
     const findAllIndices = (haystack: string, needle: string, offset: number) => {
@@ -309,7 +314,7 @@ const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: nu
     let headCandidates = findAllIndices(neighborhood, headAnchor, searchStart);
     if (headCandidates.length === 0) {
         // Fallback: Global Search
-        headCandidates = findAllIndices(pageText, headAnchor, 0);
+        headCandidates = findAllIndices(searchablePageText, headAnchor, 0);
     }
     if (headCandidates.length === 0) return null;
 
@@ -318,20 +323,20 @@ const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: nu
     let minDiff = Infinity;
 
     for (const startPos of headCandidates) {
-        // We only look for the tail AFTER the startPos
-        // Optimization: Don't search the whole document, just a reasonable window after startPos
         const expectedEnd = startPos + originalText.length;
-        const windowEnd = Math.min(pageText.length, expectedEnd + SEARCH_RADIUS); // Look forward 5000 chars
-        const searchWindow = pageText.substring(startPos, windowEnd);
+        const windowEnd = Math.min(searchablePageText.length, expectedEnd + SEARCH_RADIUS); 
+        const searchWindow = searchablePageText.substring(startPos, windowEnd);
 
-        const tailRelIndex = searchWindow.indexOf(tailAnchor, anchorSize); // Must appear AFTER head
+        const tailRelIndex = searchWindow.indexOf(tailAnchor, anchorSize); 
 
         if (tailRelIndex !== -1) {
             const endPos = startPos + tailRelIndex + anchorSize;
+            
+            // IMPORTANT: Extract the *actual* text from the *original* pageText to preserve original formatting/quotes
             const newText = pageText.substring(startPos, endPos);
             
-            const lenDiff = Math.abs(newText.length - originalText.length);
-            // Allow 50% change or 50 chars (generous for deleted templates)
+            // Compare lengths using normalized versions to avoid false mismatches
+            const lenDiff = Math.abs(normalize(newText).length - originalText.length);
             const allowedDiff = Math.max(50, originalText.length * 0.5);
 
             if (lenDiff < allowedDiff && lenDiff < minDiff) {
