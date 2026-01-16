@@ -473,19 +473,38 @@ const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
         wrapper.className = `rag-highlight unit-type-${unit.unit_type || 'default'}`;
         wrapper.dataset.unitId = String(unit.id);
         
+        // [NEW] Ensure position is relative so z-index works
+        wrapper.style.position = 'relative'; 
+
         wrapper.addEventListener('mouseenter', () => {
             const allParts = document.querySelectorAll(`.rag-highlight[data-unit-id="${unit.id}"]`);
-            allParts.forEach(el => el.classList.add('active'));
+            allParts.forEach(el => {
+                el.classList.add('active');
+                // [FIX] Bring hovered item to front so nested inner items are clickable
+                (el as HTMLElement).style.zIndex = '999'; 
+            });
         });
 
         wrapper.addEventListener('mouseleave', () => {
             const allParts = document.querySelectorAll(`.rag-highlight[data-unit-id="${unit.id}"]`);
-            allParts.forEach(el => el.classList.remove('active'));
+            allParts.forEach(el => {
+                el.classList.remove('active');
+                // [FIX] Reset z-index
+                (el as HTMLElement).style.zIndex = 'auto';
+            });
         });
 
         wrapper.addEventListener('click', (e) => {
             e.stopPropagation(); 
+            // Standard click: Open Normal Editor (Tags)
             chrome.runtime.sendMessage({ type: 'UNIT_CLICKED', unit });
+        });
+
+        // [NEW] Double Click: Open Repair/Re-align Editor
+        wrapper.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            e.preventDefault(); // Prevent native selection text-highlighting
+            chrome.runtime.sendMessage({ type: 'UNIT_DBL_CLICKED', unit });
         });
 
         const rangePart = document.createRange();
