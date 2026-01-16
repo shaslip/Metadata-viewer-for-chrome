@@ -101,6 +101,14 @@ const getContentText = (): string => {
     return text;
 };
 
+// [CHANGED] Enhanced normalization to handle smart quotes
+const normalize = (str: string) => {
+    return str.replace(/\s+/g, ' ')
+              .replace(/[\u2018\u2019]/g, "'") // Replace smart single quotes
+              .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+              .trim();
+};
+
 const verifyAndHealUnits = async () => {
     const updatesToSync: any[] = [];
     const brokenUnits: LogicalUnit[] = []; 
@@ -111,13 +119,9 @@ const verifyAndHealUnits = async () => {
         return lazyPageText;
     };
 
-    const normalize = (str: string) => str.replace(/\s+/g, ' ').trim();
-
     cachedUnits.forEach(unit => {
-        // Explicit boolean check
         const isMarkedBroken = !!(unit as any).broken_index;
 
-        // If explicitly broken in DB, trust it and skip verification
         if (isMarkedBroken) {
              brokenUnits.push(unit);
              return;
@@ -129,26 +133,14 @@ const verifyAndHealUnits = async () => {
             const range = findRangeFromOffsets(unit.start_char_index, unit.end_char_index);
             if (range) {
                 const rangeText = range.toString();
-                // [DEBUG] Log mismatch to see why Healer is rejecting it
-                if (unit.id === 340) {
-                     console.log(`[Verify 340] Expected: "${unit.text_content.substring(0, 20)}..."`);
-                     console.log(`[Verify 340] Found at offsets: "${rangeText.substring(0, 20)}..."`);
-                     console.log(`[Verify 340] Match?`, rangeText === unit.text_content || normalize(rangeText) === normalize(unit.text_content));
-                }
-
+                // [CHANGED] Use the enhanced normalize function
                 if (rangeText === unit.text_content || normalize(rangeText) === normalize(unit.text_content)) {
                     isHealthy = true;
                 }
-            } else {
-                if (unit.id === 340) console.warn("[Verify 340] Range NOT found for offsets", unit.start_char_index, unit.end_char_index);
             }
-        } catch (e) { 
-            if (unit.id === 340) console.error("[Verify 340] Error finding range", e);
-            isHealthy = false; 
-        }
+        } catch (e) { isHealthy = false; }
 
         if (isHealthy) {
-            // If healthy, explicitly clear the broken flag in memory
             if ((unit as any).broken_index) {
                 (unit as any).broken_index = 0;
             }
@@ -184,19 +176,12 @@ const verifyAndHealUnits = async () => {
             });
         } else {
             console.warn(`[Healer] Failed Unit ${unit.id} after all attempts.`);
-            
-            // [DEBUG] Log why Healer gave up
-            if (unit.id === 340) {
-                console.log("[Healer 340] Anchor search failed inside text length:", pageText.length);
-            }
-
             (unit as any).broken_index = 1;
             updatesToSync.push({ id: unit.id, broken_index: 1 });
             brokenUnits.push(unit); 
         }
     });
 
-    // Update footer and Render highlights based on new state
     renderBrokenLinksFooter(brokenUnits);
     renderHighlights();
 
