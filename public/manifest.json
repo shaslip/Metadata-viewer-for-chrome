@@ -23,7 +23,7 @@
     {
       "matches": [
         "*://*.bahai.works/*",
-        "*://*.bahai.org/library/*",        
+        "*://*.bahai.org/library/*"
       ],
       "js": ["src/content/content.js"],
       "css": ["assets/index.css"],
