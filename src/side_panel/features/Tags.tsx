@@ -189,6 +189,7 @@ export const Tags = () => {
       });
       triggerRefresh();
       clearSelection();
+      alert("Highlight saved!");
     } catch (e) {
       console.error(e);
       alert("Failed to save.");
