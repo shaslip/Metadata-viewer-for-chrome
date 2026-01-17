@@ -438,43 +438,58 @@ const highlightLibUnit = (unit: LogicalUnit) => {
     const startId = unit.source_page_id;
     const connected = unit.connected_anchors || [];
     
-    // We check if any of the involved anchors are currently visible in the DOM
-    // 1. Check Start Anchor
-    const startEl = document.getElementById(String(startId));
-    if (startEl) {
+    // Robust element lookup (ID fallback to Name)
+    let startEl = document.getElementById(String(startId));
+    if (!startEl) {
+        const named = document.getElementsByName(String(startId));
+        if (named.length > 0) startEl = named[0] as HTMLElement;
+    }
+
+    // IMPORTANT: Determine the Scope. For bahai.org, 1 Unit = 1 Paragraph (Parent of the anchor)
+    // We pass this parent to renderRelativeRange so it knows when to STOP walking.
+    if (startEl && startEl.parentElement) {
+        const scope = startEl.parentElement;
+        
         if (connected.length === 0) {
-            // A. Single Paragraph Highlight
-            renderRelativeRange(startEl, unit.start_char_index, unit.end_char_index, unit);
+            // Single Paragraph
+            renderRelativeRange(startEl, unit.start_char_index, unit.end_char_index, unit, scope);
         } else {
-            // B. Multi-Paragraph: START segment (Start -> End of Block)
-            // We use a large number (99999) to signify "End of Block" safely
-            renderRelativeRange(startEl, unit.start_char_index, 99999, unit);
+            // Multi-Paragraph Start (Highlight to end of scope)
+            renderRelativeRange(startEl, unit.start_char_index, 99999, unit, scope);
         }
     }
 
-    // 2. Check Connected Anchors (Middle & End)
+    // Connected Anchors (Middle & End)
     connected.forEach((anchorId, index) => {
-        const anchorEl = document.getElementById(String(anchorId));
-        if (!anchorEl) return; // Not visible, skip
+        let anchorEl = document.getElementById(String(anchorId));
+        if (!anchorEl || !anchorEl.parentElement) return;
 
+        const scope = anchorEl.parentElement;
         const isLast = index === connected.length - 1;
 
         if (isLast) {
-            // C. Multi-Paragraph: END segment (Start of Block -> End Index)
-            renderRelativeRange(anchorEl, 0, unit.end_char_index, unit);
+            renderRelativeRange(anchorEl, 0, unit.end_char_index, unit, scope);
         } else {
-            // D. Multi-Paragraph: MIDDLE segment (Full Block)
-            renderRelativeRange(anchorEl, 0, 99999, unit);
+            renderRelativeRange(anchorEl, 0, 99999, unit, scope);
         }
     });
 };
 
 // Helper to Create Range relative to an Anchor
-const renderRelativeRange = (anchorEl: HTMLElement, startOffset: number, endOffset: number, unit: LogicalUnit) => {
+// [CHANGED] Helper to Create Range relative to an Anchor with SCOPE protection
+const renderRelativeRange = (
+    anchorEl: HTMLElement, 
+    startOffset: number, 
+    endOffset: number, 
+    unit: LogicalUnit, 
+    scopeEl: HTMLElement
+) => {
     const range = document.createRange();
     
-    // Set Start
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    // Start the Walker at the scope level (paragraph)
+    // Note: Walker is now scoped to scopeEl, preventing it from wandering the whole page
+    const walker = document.createTreeWalker(scopeEl, NodeFilter.SHOW_TEXT);
+    
     walker.currentNode = anchorEl;
 
     let charCount = 0;
@@ -483,6 +498,10 @@ const renderRelativeRange = (anchorEl: HTMLElement, startOffset: number, endOffs
 
     // A. FIND START
     while ((node = walker.nextNode())) {
+        
+        // [NEW] Skip logic: Ignore page number artifacts if present
+        if (node.parentElement?.closest('.brl-pnum')) continue;
+
         const len = node.textContent?.length || 0;
         
         if (!startFound) {
@@ -494,14 +513,9 @@ const renderRelativeRange = (anchorEl: HTMLElement, startOffset: number, endOffs
         
         // B. FIND END (Once start is found)
         if (startFound) {
-             // Stop if we hit the next anchor (Block Boundary)
-             // We do this check by looking at the parent of the text node
-             if (node.parentElement?.closest('.brl-location') || node.parentElement?.querySelector('.brl-location')) {
-                 // Safety Break: We hit another anchor. Cap the selection here.
-                 range.setEnd(node, len);
-                 break;
-             }
-
+             // [REMOVED] The buggy querySelector check was here. 
+             // We now rely on 'scopeEl' (the paragraph) to contain the text naturally.
+             
              if (charCount + len >= endOffset) {
                  range.setEnd(node, endOffset - charCount);
                  safeHighlightRange(range, unit); // RENDER
@@ -510,14 +524,12 @@ const renderRelativeRange = (anchorEl: HTMLElement, startOffset: number, endOffs
         }
         
         charCount += len;
-        
-        // Safety Break: Stop after reasonable length to prevent infinite loop
+        // Safety Break
         if (charCount > 50000) break; 
     }
     
-    // If we ran out of nodes but haven't capped end (e.g. End of Block case 99999)
+    // If we ran out of nodes (End of Paragraph) and are still highlighting (e.g. 99999 case)
     if (startFound) {
-        // Just set end to the end of the last node visited
         range.setEnd(node || anchorEl, node?.textContent?.length || 0);
         safeHighlightRange(range, unit);
     }
