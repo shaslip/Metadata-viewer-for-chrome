@@ -21,6 +21,7 @@ const handleSelection = () => {
         }
 
         const context = getPageMetadata();
+        const range = selection.getRangeAt(0);
         let payload: any = {
             type: 'TEXT_SELECTED',
             text: selectedText,
@@ -33,7 +34,6 @@ const handleSelection = () => {
         // STRATEGY: BAHAI.ORG (Anchor-Relative + Multi-Block)
         // ---------------------------------------------------------
         if (CURRENT_SITE.code === 'lib') {
-            const range = selection.getRangeAt(0);
 
             // 1. Find START Anchor
             const startAnchorData = findUpstreamAnchor(range.startContainer);
