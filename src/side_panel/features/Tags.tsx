@@ -48,7 +48,7 @@ export const Tags = () => {
   const [selectedParent, setSelectedParent] = useState<{id: number, label: string} | null>(null);
 
   // Repair State
-  const [repairSelection, setRepairSelection] = useState<{text: string, start: number, end: number} | null>(null);
+  const [repairSelection, setRepairSelection] = useState<{text: string, start: number, end: number, connected_anchors?: number[]} | null>(null);
   const [forceRepairMode, setForceRepairMode] = useState(false);
 
   // Author Logic
@@ -87,7 +87,8 @@ export const Tags = () => {
              setRepairSelection({
                  text: msg.text,
                  start: msg.offsets.start,
-                 end: msg.offsets.end
+                 end: msg.offsets.end,
+                 connected_anchors: msg.connected_anchors || []
              });
              return;
           }
