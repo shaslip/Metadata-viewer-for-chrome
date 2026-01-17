@@ -531,31 +531,22 @@ const renderRelativeRange = (
     let charCount = 0;
     let startFound = false;
     let node;
-    let nodesScanned = 0;
 
     console.log(`[Highlighter] Starting Scan for Unit ${unit.id}. Offset Goal: ${startOffset}. Scope text length: ${scopeEl.textContent?.length}`);
 
     while ((node = walker.nextNode())) {
-        nodesScanned++;
-
-        // 2. Position Check
+        // 2. STRICT ORDERING: Ignore text that physically precedes the anchor
         if (anchorEl !== scopeEl) {
+            // compareDocumentPosition: 4 means Node follows Anchor.
             const position = anchorEl.compareDocumentPosition(node);
-            // We want nodes FOLLOWING (4) or CONTAINED_BY (16 - unlikely for text) the anchor
-            if (!(position & Node.DOCUMENT_POSITION_FOLLOWING)) {
-                // console.log(`[Highlighter] Node skipped (Precedes anchor): "${node.textContent?.substring(0, 10)}..."`);
-                continue; 
-            }
+            if (!(position & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
         }
 
-        // 3. Noise Check
-        if (node.parentElement?.closest('.brl-pnum')) {
-            console.log(`[Highlighter] Node skipped (Noise/PageNum)`);
-            continue;
-        }
+        // 3. NOISE FILTER: Ignore Page Numbers & Empty Anchors
+        if (node.parentElement?.closest('.brl-pnum')) continue;
+        if (node.parentElement?.classList.contains('brl-location')) continue;
 
         const len = node.textContent?.length || 0;
-        // console.log(`[Highlighter] Scanning Node: "${node.textContent?.substring(0,10)}..." (Len: ${len}, CurrentCount: ${charCount})`);
         
         // A. FIND START
         if (!startFound) {
