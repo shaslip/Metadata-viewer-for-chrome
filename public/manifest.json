@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Bahá’í Text Annotation Tool",
   "version": "2.0",
-  "description": "A research tool for annotating and cross-referencing Bahá’í literature across library and community websites.",
+  "description": "A research tool for annotating and cross-referencing Bahá’í literature across official and community run websites.",
   "permissions": [
     "storage",
     "sidePanel",
