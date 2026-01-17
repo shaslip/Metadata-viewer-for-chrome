@@ -1,6 +1,19 @@
 const API_BASE = "https://digitalbahairesources.org";
 const UNITS_ENDPOINT = "/api/units";
 
+// Helper to get headers easily
+const getHeaders = (token?: string) => {
+    const manifest = chrome.runtime.getManifest();
+    const headers: any = {
+        'Content-Type': 'application/json',
+        'X-Client-Version': manifest.version // <--- THE VERSION LOCK
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+};
+
 // 1. SIDE PANEL TOGGLE
 chrome.action.onClicked.addListener((tab) => {
     chrome.sidePanel.setOptions({
