@@ -69,15 +69,13 @@ export const Label = () => {
       setRepairTarget(null);
   };
 
-  // RENDER LOGIC
-  
-  // 1. Repair Mode (Overrides everything else)
-  // If we have a repair target, we render the form in "Repair Mode".
-  // We pass 'currentSelection' (if exists) as the NEW text to use.
+  // 1. Repair Mode
   if (repairTarget) {
       return (
-          <div className="p-4">
-              <Header title="Repair Unit" />
+          <div className="p-4 space-y-6">
+              <div className="flex justify-between items-center">
+                 <h2 className="text-lg font-bold text-slate-800">Repair Unit</h2>
+              </div>
               <UnitForm 
                   existingUnit={repairTarget}
                   isRepairing={true}
@@ -91,11 +89,13 @@ export const Label = () => {
       );
   }
 
-  // 2. Edit Mode (Normal)
+  // 2. Edit Mode
   if (selectedUnit) {
     return (
-      <div className="p-4">
-        <Header title="Edit Unit" />
+      <div className="p-4 space-y-6">
+        <div className="flex justify-between items-center">
+             <h2 className="text-lg font-bold text-slate-800">Edit Unit</h2>
+        </div>
         <UnitForm 
           existingUnit={selectedUnit}
           onCancel={handleCancel}
@@ -110,8 +110,10 @@ export const Label = () => {
   if (currentSelection) {
     console.log("[Label] Rendering UnitForm. Context anchors:", currentSelection.connected_anchors);
     return (
-      <div className="p-4">
-        <Header title="New Addition" />
+      <div className="p-4 space-y-6">
+        <div className="flex justify-between items-center">
+             <h2 className="text-lg font-bold text-slate-800">New Addition</h2>
+        </div>
         <UnitForm 
           selection={currentSelection.text}
           offsets={currentSelection.offsets}
@@ -126,43 +128,40 @@ export const Label = () => {
 
   // 4. Idle State
   return (
-    <div className="flex flex-col h-full bg-slate-50">
-        
-        {/* HEADER (Matched to Q&A Page) */}
-        <div className="p-4 bg-white border-b border-slate-200 shadow-sm space-y-4">
-            <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 group relative">
-                    <h2 className="text-lg font-bold text-slate-800">
-                        Label Manager
-                    </h2>
-                    <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
-                    
-                    {/* Tooltip */}
-                    <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
-                        <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
-                        <p>Highlight a tablet, prayer, or historical account to label it. This allows the RAG system to understand the specific <em>type</em> of content.</p>
-                        <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800"></div>
-                    </div>
+    <div className="p-4 space-y-6 h-full flex flex-col">
+        {/* [FIX] Header matches Q&A exactly (No bg-white wrapper, correct markup) */}
+        <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2 group relative">
+                <h2 className="text-lg font-bold text-slate-800">
+                    Label Manager
+                </h2>
+                <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
+                
+                {/* Tooltip */}
+                <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
+                    <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
+                    <p>Highlight a tablet, prayer, or historical account to label it. This allows the RAG system to understand the specific type of content.</p>
+                    <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800"></div>
                 </div>
             </div>
-
-            {/* STATS SECTION (Requested Feature) */}
-            {pageStats && pageStats.count > 0 && (
-                <div className="bg-blue-50 rounded border border-blue-100 p-3 animate-in fade-in duration-500">
-                    <p className="text-xs font-bold text-blue-800 mb-1 uppercase tracking-wide">
-                        This page contains: {pageStats.count} Unit{pageStats.count !== 1 ? 's' : ''}
-                    </p>
-                    <div className="flex items-start gap-2 opacity-75">
-                         <DocumentTextIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                         <span className="text-xs text-blue-900 font-serif italic line-clamp-2">
-                             "{pageStats.snippet}"
-                         </span>
-                    </div>
-                </div>
-            )}
         </div>
+
+        {/* Stats Section */}
+        {pageStats && pageStats.count > 0 && (
+            <div className="bg-blue-50 rounded border border-blue-100 p-3 animate-in fade-in duration-500">
+                <p className="text-xs font-bold text-blue-800 mb-1 uppercase tracking-wide">
+                    This page contains: {pageStats.count} Unit{pageStats.count !== 1 ? 's' : ''}
+                </p>
+                <div className="flex items-start gap-2 opacity-75">
+                        <DocumentTextIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-xs text-blue-900 font-serif italic line-clamp-2">
+                            "{pageStats.snippet}"
+                        </span>
+                </div>
+            </div>
+        )}
         
-        {/* EMPTY STATE PLACEHOLDER */}
+        {/* Placeholder Content */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
             <PencilSquareIcon className="h-12 w-12 mb-2 opacity-20" /> 
             <p className="text-sm max-w-xs">
@@ -172,21 +171,3 @@ export const Label = () => {
     </div>
   );
 };
-
-// Subcomponent for consistent Headers + Tooltips
-const Header = ({ title }: { title: string }) => (
-    <div className="flex items-center gap-2 group relative mb-4">
-        <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-            {title}
-        </h2>
-        <QuestionMarkCircleIcon className="w-4 h-4 text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
-        
-        {/* Tooltip */}
-        <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
-        <p className="font-bold mb-1 border-b border-slate-600 pb-1">Labeling Content</p>
-        <p>Use this tab to define logical units of text (Tablets, Prayers, Talks) within the page. This metadata is crucial for the AI to understand the *type* of content it is reading.</p>
-        {/* Tooltip Arrow */}
-        <div className="absolute bottom-full left-10 border-4 border-transparent border-b-slate-800"></div>
-        </div>
-    </div>
-);
