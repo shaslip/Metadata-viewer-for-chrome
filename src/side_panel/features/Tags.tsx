@@ -198,15 +198,62 @@ export const Tags = () => {
   const handleUpdate = async () => {
     if (!editingUnit) return;
     setIsSaving(true);
+
     try {
-        await put(`/api/units/${editingUnit.id}/tags`, { 
-            tags: selectedTags.map(t => t.id) 
-        });
+        // SCENARIO A: Simple Tag Update (No text changes, not broken)
+        if (!editingUnit.broken_index && !forceRepairMode && !repairSelection) {
+             await put(`/api/units/${editingUnit.id}/tags`, { 
+                tags: selectedTags.map(t => t.id) 
+             });
+             triggerRefresh();
+             setEditingUnit(null);
+             setIsSaving(false);
+             return;
+        }
+
+        // SCENARIO B: Repair / Re-Highlight (Delete & Re-Create)
+        if (!repairSelection) {
+            alert("No text selected for repair.");
+            setIsSaving(false);
+            return;
+        }
+
+        // Check root properties first (from SQL), fallback to defaults
+        const sourceCode = editingUnit.source_code || 'bw';
+        const sourcePageId = editingUnit.source_page_id || 0;
+        const unitTitle = editingUnit.title || "Restored Highlight";
+
+        const payload = {
+            source_code: sourceCode,
+            source_page_id: sourcePageId,
+            title: unitTitle,
+            
+            // NEW DATA from Repair Selection
+            start_char_index: repairSelection.start,
+            end_char_index: repairSelection.end,
+            text_content: repairSelection.text,
+            
+            // Pass the new connected anchors
+            connected_anchors: repairSelection.connected_anchors || [],
+
+            author: author,
+            unit_type: editingUnit.unit_type,
+            tags: selectedTags.map(t => t.id)
+        };
+
+        // Execute Swap
+        await del(`/api/units/${editingUnit.id}`);
+        await post('/api/contribute/unit', payload);
+
         triggerRefresh();
         setEditingUnit(null);
+        setRepairSelection(null);
+        setForceRepairMode(false);
+        alert("Highlight repaired and saved.");
+
     } catch (e) {
         console.error(e);
-        alert("Failed to update.");
+        alert("Update failed.");
     } finally {
         setIsSaving(false);
     }
