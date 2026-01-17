@@ -89,15 +89,14 @@ export const initHighlighter = async () => {
     });
 };
 
-// Helper: Extract ONLY visible text (ignores <script>, <style>, etc)
+// Helper: Extract ONLY visible text
 const getContentText = (): string => {
     // 1. Try MediaWiki container
     let container = document.querySelector('#mw-content-text');
     
     // 2. Try Bahai.org Library container (Fallback)
     if (!container && CURRENT_SITE.code === 'lib') {
-        // Based on your snippet, content is in data-unit="section" or generally in the body
-        // You might need to adjust this selector to be more specific if there is a wrapper
+        // Looks for the specific section or falls back to body
         container = document.querySelector('[data-unit="section"]') || document.body;
     }
 
@@ -371,24 +370,36 @@ const renderHighlights = () => {
         }
     });
 
-    // 2. Filter Units based on Mode AND Integrity
+    console.log(`[Highlighter] Render called. Mode: ${currentMode}. Cached Units: ${cachedUnits.length}`);
+
+    // 2. Filter Units
     const unitsToRender = cachedUnits.filter(unit => {
-        // Never render broken units
-        if ((unit as any).broken_index) return false;
+        // Check Broken Status
+        if ((unit as any).broken_index) {
+            console.log(`[Highlighter] Skipped Unit ${unit.id}: Marked as Broken.`);
+            return false;
+        }
 
-        // Mode Logic
-        if (currentMode === 'TAXONOMY_MODE') return unit.unit_type === 'user_highlight';
-        if (currentMode === 'CREATE_MODE') return !['canonical_answer', 'link_subject', 'link_object', 'user_highlight'].includes(unit.unit_type); 
-        if (currentMode === 'QA_MODE') return unit.unit_type === 'canonical_answer';
-        if (currentMode === 'RELATIONS_MODE') return unit.unit_type === 'link_subject' || unit.unit_type === 'link_object';
+        // Check Mode Logic
+        let shouldRender = false;
+        if (currentMode === 'TAXONOMY_MODE') shouldRender = (unit.unit_type === 'user_highlight');
+        else if (currentMode === 'QA_MODE') shouldRender = (unit.unit_type === 'canonical_answer');
+        else if (currentMode === 'RELATIONS_MODE') shouldRender = (unit.unit_type === 'link_subject' || unit.unit_type === 'link_object');
+        else if (currentMode === 'CREATE_MODE') shouldRender = !['canonical_answer', 'link_subject', 'link_object', 'user_highlight'].includes(unit.unit_type);
 
-        return false; 
+        if (!shouldRender) {
+            console.log(`[Highlighter] Skipped Unit ${unit.id}: Unit Type '${unit.unit_type}' does not match Mode '${currentMode}'.`);
+        }
+        
+        return shouldRender;
     });
+
+    console.log(`[Highlighter] Units passing filter: ${unitsToRender.length}`);
 
     // 3. Draw
     unitsToRender.forEach(highlightUnit);
 
-    // 4. NEW: Check for pending scroll (Fixes race condition on new page load)
+    // 4. Scroll
     if (pendingScrollId) {
         attemptScroll();
     }
