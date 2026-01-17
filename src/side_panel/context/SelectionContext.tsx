@@ -32,7 +32,7 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
           text: request.text,
           offsets: request.offsets,
           context: request.context,
-          connected_anchors: request.connected_anchors
+          connected_anchors: request.connected_anchors || []
         });
       }
       
