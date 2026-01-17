@@ -11,8 +11,7 @@
   "host_permissions": [
     "*://*.bahai.works/*",
     "*://*.bahai.org/library/*",
-    "*://digitalbahairesources.org/*",
-    "http://localhost:3008/*"
+    "*://digitalbahairesources.org/*"
   ],
   "background": {
     "service_worker": "src/service_worker/service_worker.js"
