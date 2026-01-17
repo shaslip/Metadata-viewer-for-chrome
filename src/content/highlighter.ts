@@ -476,7 +476,6 @@ const highlightLibUnit = (unit: LogicalUnit) => {
 };
 
 // Helper to Create Range relative to an Anchor
-// [CHANGED] Helper to Create Range relative to an Anchor with SCOPE protection
 const renderRelativeRange = (
     anchorEl: HTMLElement, 
     startOffset: number, 
@@ -486,24 +485,30 @@ const renderRelativeRange = (
 ) => {
     const range = document.createRange();
     
-    // Start the Walker at the scope level (paragraph)
-    // Note: Walker is now scoped to scopeEl, preventing it from wandering the whole page
+    // 1. Start walker at the Scope Root (Paragraph level)
     const walker = document.createTreeWalker(scopeEl, NodeFilter.SHOW_TEXT);
     
-    walker.currentNode = anchorEl;
-
     let charCount = 0;
     let startFound = false;
     let node;
 
-    // A. FIND START
     while ((node = walker.nextNode())) {
-        
-        // [NEW] Skip logic: Ignore page number artifacts if present
+        // 2. Skip Logic: Ensure strict ordering
+        // If the current text node is BEFORE the anchor, skip it.
+        // We use bitmask 4 (Node.DOCUMENT_POSITION_FOLLOWING).
+        if (anchorEl !== scopeEl) {
+            const position = anchorEl.compareDocumentPosition(node);
+            if (!(position & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                continue; 
+            }
+        }
+
+        // 3. Skip Page Numbers (Noise)
         if (node.parentElement?.closest('.brl-pnum')) continue;
 
         const len = node.textContent?.length || 0;
         
+        // A. FIND START
         if (!startFound) {
             if (charCount + len >= startOffset) {
                 range.setStart(node, startOffset - charCount);
@@ -511,27 +516,27 @@ const renderRelativeRange = (
             }
         }
         
-        // B. FIND END (Once start is found)
+        // B. FIND END
         if (startFound) {
-             // [REMOVED] The buggy querySelector check was here. 
-             // We now rely on 'scopeEl' (the paragraph) to contain the text naturally.
-             
              if (charCount + len >= endOffset) {
                  range.setEnd(node, endOffset - charCount);
-                 safeHighlightRange(range, unit); // RENDER
+                 safeHighlightRange(range, unit); 
                  return;
              }
         }
         
+        // Only increment count if we are AFTER the anchor (which we are, due to step 2)
         charCount += len;
-        // Safety Break
-        if (charCount > 50000) break; 
+        
+        if (charCount > 50000) break; // Safety
     }
     
-    // If we ran out of nodes (End of Paragraph) and are still highlighting (e.g. 99999 case)
+    // C. Handle "Rest of Paragraph" case
     if (startFound) {
         range.setEnd(node || anchorEl, node?.textContent?.length || 0);
         safeHighlightRange(range, unit);
+    } else {
+        console.warn(`[Highlighter] Failed to find start for Unit ${unit.id}. Scanned ${charCount} chars in scope.`);
     }
 };
 
