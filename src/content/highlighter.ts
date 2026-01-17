@@ -113,48 +113,48 @@ const setupLibObserver = () => {
 
 // Lib Strategy: Scanner
 const scanAndFetchLibIds = async (forceRefresh = false) => {
-    // 1. Find all potential IDs in the DOM
     const anchors = document.querySelectorAll('.brl-location[id]');
-    const idsToFetch: number[] = [];
+    
+    // [CHANGE] Collect IDs as Strings to preserve "0555..."
+    const idsToFetch: string[] = [];
 
     anchors.forEach(el => {
         const idStr = el.id;
         
-        // [FIX] If forceRefresh is true, we fetch it even if we've seen it before
         if (forceRefresh || !fetchedIds.has(idStr)) {
-            const idNum = parseInt(idStr, 10);
-            if (!isNaN(idNum)) {
-                // If forcing, don't re-add to Set (it's already there), just add to fetch list
+            // Ensure it looks like a number, but keep as string
+            if (/^\d+$/.test(idStr)) {
                 if (!fetchedIds.has(idStr)) fetchedIds.add(idStr);
-                idsToFetch.push(idNum);
+                idsToFetch.push(idStr);
             }
         }
     });
 
     if (idsToFetch.length === 0) return;
 
-    console.log(`[Highlighter] Batch fetching ${idsToFetch.length} IDs (Force: ${forceRefresh})...`);
+    console.log(`[Highlighter] Batch fetching ${idsToFetch.length} IDs...`);
 
-    // Batch Fetch
     const response = await chrome.runtime.sendMessage({
         type: 'FETCH_BATCH_DATA',
         source_code: 'lib',
-        page_ids: idsToFetch
+        page_ids: idsToFetch // Now sending strings
     });
 
     if (response && response.units) {
         if (forceRefresh) {
-            // [FIX] If forcing, we need to REPLACE cached units for these IDs, not just append
-            // 1. Identify IDs we just fetched
             const fetchedIdSet = new Set(idsToFetch);
             
-            // 2. Remove old versions of units belonging to these pages
-            cachedUnits = cachedUnits.filter(u => u.source_page_id !== undefined && !fetchedIdSet.has(u.source_page_id));
+            // [CHANGE] Filter based on string inclusion in connected_anchors
+            cachedUnits = cachedUnits.filter(u => {
+                // If unit has connected anchors, check if any overlap with what we just fetched
+                if (u.connected_anchors && u.connected_anchors.some(a => fetchedIdSet.has(String(a)))) {
+                    return false; // Remove old version
+                }
+                return true; 
+            });
             
-            // 3. Add new versions
             cachedUnits = [...cachedUnits, ...response.units];
         } else {
-            // Old "Lazy Load" behavior (Append only)
             const existingIds = new Set(cachedUnits.map(u => u.id));
             const uniqueNew = response.units.filter((u: any) => !existingIds.has(u.id));
             cachedUnits = [...cachedUnits, ...uniqueNew];
@@ -542,58 +542,48 @@ const highlightUnit = (unit: LogicalUnit) => {
 
 // Logic for Bahai.org
 const highlightLibUnit = (unit: LogicalUnit) => {
-    console.log(`[Highlighter] Processing Unit ${unit.id} (Bahai.org mode)`);
+    // [CHANGE] We now rely entirely on connected_anchors which includes the start anchor
+    const anchors = unit.connected_anchors || [];
     
-    const startId = unit.source_page_id;
-    const connected = unit.connected_anchors || [];
-    
-    // 1. Lookup Anchor
-    let startEl = document.getElementById(String(startId));
-    if (!startEl) {
-        const named = document.getElementsByName(String(startId));
-        if (named.length > 0) startEl = named[0] as HTMLElement;
+    // Fallback for old data: if no connected_anchors, try to use source_page_id if it exists
+    if (anchors.length === 0 && unit.source_page_id) {
+         anchors.push(unit.source_page_id);
     }
 
-    if (!startEl) {
-        console.error(`[Highlighter] Unit ${unit.id}: Start Anchor ID '${startId}' NOT FOUND in DOM.`);
-        return;
-    }
+    if (anchors.length === 0) return;
 
-    // 2. Lookup Scope
-    if (!startEl.parentElement) {
-        console.error(`[Highlighter] Unit ${unit.id}: Anchor '${startId}' has no parentElement.`);
-        return;
-    }
-
-    const scope = startEl.parentElement;
-    console.log(`[Highlighter] Unit ${unit.id}: Found Anchor. Scope is <${scope.tagName.toLowerCase()} class="${scope.className}">`);
-
-    // 3. Render
-    if (connected.length === 0) {
-        console.log(`[Highlighter] Unit ${unit.id}: Rendering Single Paragraph (${unit.start_char_index} -> ${unit.end_char_index})`);
-        renderRelativeRange(startEl, unit.start_char_index, unit.end_char_index, unit, scope);
-    } else {
-        console.log(`[Highlighter] Unit ${unit.id}: Rendering Multi-Part START (${unit.start_char_index} -> END)`);
-        renderRelativeRange(startEl, unit.start_char_index, 99999, unit, scope);
-    }
-
-    // 4. Connected Anchors
-    connected.forEach((anchorId, index) => {
+    anchors.forEach((anchorId, index) => {
+        // [CHANGE] Handle String IDs
         let anchorEl = document.getElementById(String(anchorId));
-        if (!anchorEl || !anchorEl.parentElement) {
-            console.warn(`[Highlighter] Unit ${unit.id}: Connected anchor ${anchorId} missing or detached.`);
-            return;
+        if (!anchorEl) {
+            const named = document.getElementsByName(String(anchorId));
+            if (named.length > 0) anchorEl = named[0] as HTMLElement;
         }
+
+        if (!anchorEl || !anchorEl.parentElement) return;
 
         const scope = anchorEl.parentElement;
-        const isLast = index === connected.length - 1;
-        console.log(`[Highlighter] Unit ${unit.id}: Rendering Connected Anchor ${anchorId} (Last? ${isLast})`);
+        const isFirst = index === 0;
+        const isLast = index === anchors.length - 1;
 
-        if (isLast) {
-            renderRelativeRange(anchorEl, 0, unit.end_char_index, unit, scope);
+        // Logic:
+        // 1. If only 1 anchor (Single Paragraph): Start -> End
+        // 2. If First: Start -> 99999
+        // 3. If Middle: 0 -> 99999
+        // 4. If Last: 0 -> End
+
+        let start = 0;
+        let end = 99999;
+
+        if (anchors.length === 1) {
+            start = unit.start_char_index;
+            end = unit.end_char_index;
         } else {
-            renderRelativeRange(anchorEl, 0, 99999, unit, scope);
+            if (isFirst) start = unit.start_char_index;
+            if (isLast) end = unit.end_char_index;
         }
+
+        renderRelativeRange(anchorEl, start, end, unit, scope);
     });
 };
 
