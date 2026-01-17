@@ -94,10 +94,12 @@ const getContentText = (): string => {
     // 1. Try MediaWiki container
     let container = document.querySelector('#mw-content-text');
     
-    // 2. Try Bahai.org Library container (Fallback)
+    // 2. Try Bahai.org Library container
+    // Hierarchy: body -> .reader-canvas -> .library-document -> .library-document-content
     if (!container && CURRENT_SITE.code === 'lib') {
-        // Looks for the specific section or falls back to body
-        container = document.querySelector('[data-unit="section"]') || document.body;
+        container = document.querySelector('.library-document-content') || 
+                    document.querySelector('[data-unit="section"]') || 
+                    document.body;
     }
 
     if (!container) return "";
@@ -106,6 +108,8 @@ const getContentText = (): string => {
     let text = "";
     let node;
     while ((node = walker.nextNode())) {
+        // [NEW] Skip page number text in the healer's extraction to match visual renderer
+        if (node.parentElement?.closest('.brl-pnum')) continue;
         text += node.textContent;
     }
     return text;
