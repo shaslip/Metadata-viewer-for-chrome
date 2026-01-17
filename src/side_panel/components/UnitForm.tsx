@@ -124,14 +124,34 @@ export const UnitForm: React.FC<Props> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      
       {/* 1. TEXT DISPLAY */}
-      <div className="bg-white p-3 rounded border border-slate-200 shadow-sm">
-        <label className="block text-xs font-semibold text-slate-500 mb-1">
-            {isViewMode ? "SAVED CONTENT" : "SELECTED TEXT"}
-        </label>
-        <p className="text-sm text-slate-800 line-clamp-6 italic">
-            "{isViewMode ? existingUnit!.text_content : selection}"
-        </p>
+      <div className={`p-3 rounded border shadow-sm ${isRepairing ? 'bg-green-50 border-green-200' : 'bg-white border-slate-200'}`}>
+        <div className="flex justify-between items-center mb-1">
+            <label className="text-xs font-semibold text-slate-500">
+                {isRepairing ? "NEW SELECTION (REPAIRING)" : (isViewMode ? "SAVED CONTENT" : "SELECTED TEXT")}
+            </label>
+            {isViewMode && !isRepairing && canEdit && (
+                <button 
+                    type="button" 
+                    onClick={onEnterRepair}
+                    className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"
+                    title="Update the text highlights for this unit"
+                >
+                    <ArrowPathIcon className="w-3 h-3" /> Re-align
+                </button>
+            )}
+        </div>
+        
+        {isRepairing && !selection ? (
+            <div className="text-sm text-slate-400 italic py-2 text-center animate-pulse">
+                Select the correct text on the page...
+            </div>
+        ) : (
+            <p className="text-sm text-slate-800 line-clamp-6 italic font-serif">
+                "{isRepairing && selection ? selection : (isViewMode ? existingUnit!.text_content : selection)}"
+            </p>
+        )}
       </div>
 
       {/* 2. METADATA FIELDS */}
@@ -206,8 +226,16 @@ export const UnitForm: React.FC<Props> = ({
 
                 {/* 2. Update Button: Hidden during delete confirmation to reduce noise */}
                 {!deleteConfirmOpen && (
-                    <button type="submit" className="flex-1 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                        Update
+                    <button 
+                        type="submit" 
+                        disabled={isRepairing && !selection} 
+                        className={`flex-1 py-2 text-sm text-white rounded transition-colors ${
+                            isRepairing 
+                            ? 'bg-green-600 hover:bg-green-700 disabled:bg-green-300' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                    >
+                        {isRepairing ? 'Confirm Repair' : 'Update'}
                     </button>
                 )}
 
