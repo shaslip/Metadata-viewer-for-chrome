@@ -27,6 +27,14 @@ export const initHighlighter = async () => {
             sendResponse(getPageMetadata());
             return true; 
         }
+        // Return stats from the already loaded cache
+        if (request.type === 'GET_CACHED_STATS') {
+            const count = cachedUnits.length;
+            // Get first unit's text for the snippet, if available
+            const snippet = count > 0 ? cachedUnits[0].text_content.substring(0, 60) + "..." : "";
+            sendResponse({ count, snippet });
+            return true;
+        }
         if (request.type === 'UPDATE_HIGHLIGHTS' && Array.isArray(request.units)) {
             const incomingIds = new Set(request.units.map((u: any) => u.id));
             cachedUnits = [
