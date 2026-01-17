@@ -25,6 +25,13 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const handleMessage = (request: any) => {
+      // [DEBUG] 
+      console.log("--- [V1 CHECK] Context Received ---", {
+          type: request.type,
+          hasAnchors: "connected_anchors" in request,
+          anchorsValue: request.connected_anchors
+      });
+
       // CASE 1: New Text Selected
       if (request.type === 'TEXT_SELECTED') {
         setSelectedUnit(null); 
