@@ -392,27 +392,41 @@ export const Tags = () => {
 
   // Repair Logic
   const handleRepair = async () => {
-      if (!editingUnit || !repairSelection) return;
-      setIsSaving(true);
-      try {
-          await put(`/api/units/${editingUnit.id}`, {
-              start_char_index: repairSelection.start,
-              end_char_index: repairSelection.end,
-              text_content: repairSelection.text,
-              broken_index: 0 
-          });
-          
-          triggerRefresh();
-          setEditingUnit(null);
-          setRepairSelection(null);
-          setForceRepairMode(false); // Turn off mode
-          alert("Highlight updated successfully!");
-      } catch (e) {
-          alert("Failed to update highlight.");
-      } finally {
-          setIsSaving(false);
-      }
-  };
+    if (!editingUnit || !repairSelection) return;
+    setIsSaving(true);
+    
+    // DELETE + POST (Re-create)
+    try {
+        const payload = {
+            source_code: editingUnit.source_code || 'bw',
+            source_page_id: editingUnit.source_page_id || 0,
+            title: editingUnit.title || "Repaired Highlight",
+            text_content: repairSelection.text,
+            start_char_index: repairSelection.start,
+            end_char_index: repairSelection.end,
+            connected_anchors: repairSelection.connected_anchors || [],
+            author: author,
+            unit_type: editingUnit.unit_type,
+            tags: selectedTags.map(t => t.id)
+        };
+
+        // 1. Delete old
+        await del(`/api/units/${editingUnit.id}`);
+        // 2. Create new
+        await post('/api/contribute/unit', payload);
+        
+        triggerRefresh();
+        setEditingUnit(null);
+        setRepairSelection(null);
+        setForceRepairMode(false);
+        alert("Highlight repaired and saved.");
+    } catch (e) {
+        console.error(e);
+        alert("Failed to update highlight.");
+    } finally {
+        setIsSaving(false);
+    }
+};
 
   const closeBottomPane = () => {
     clearSelection();
