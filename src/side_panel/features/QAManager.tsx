@@ -6,7 +6,7 @@ import { LogicalUnit, PageMetadata } from '@/utils/types';
 
 type StagedAnswer = 
   | { type: 'existing', unit: LogicalUnit }
-  | { type: 'new', text: string, offsets: { start: number, end: number }, context: PageMetadata };
+  | { type: 'new', text: string, offsets: { start: number, end: number }, context: PageMetadata, connected_anchors?: number[] };
 
 export const QAManager = () => {
   const { currentSelection, selectedUnit, clearSelection } = useSelection();
@@ -148,6 +148,7 @@ export const QAManager = () => {
           text_content: answer.unit.text_content,
           start_char_index: answer.unit.start_char_index,
           end_char_index: answer.unit.end_char_index,
+          connected_anchors: answer.unit.connected_anchors
       } : {
           source_code: answer.context.source_code,
           source_page_id: answer.context.source_page_id,
@@ -155,6 +156,7 @@ export const QAManager = () => {
           text_content: answer.text,
           start_char_index: answer.offsets.start,
           end_char_index: answer.offsets.end,
+          connected_anchors: answer.connected_anchors || []
       };
 
       const unitRes = await post('/api/contribute/unit', {
