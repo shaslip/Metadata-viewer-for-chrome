@@ -65,20 +65,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'NAVIGATE_TO_UNIT') {
         const { source_code, source_page_id, unit_id, title } = request;
 
-        // 1. Resolve Base URL (Adjust domains if necessary)
-        let baseUrl = 'https://bahai.works'; 
-        if (source_code === 'bp') baseUrl = 'https://bahaipedia.org';
-        if (source_code === 'bd') baseUrl = 'https://bahaidata.org';
-        if (source_code === 'bm') baseUrl = 'https://bahai.media';
+        let targetUrl = '';
 
-        // MediaWiki standard URL pattern
-        let targetUrl = `${baseUrl}/index.php?curid=${source_page_id}`;
-        if (title) {
-            const safeTitle = title.replace(/ /g, '_');
-            const prettyTitle = encodeURIComponent(safeTitle).replace(/%2F/g, '/');
-            targetUrl = `${baseUrl}/${prettyTitle}`;
+        // Handle Bahai.org Library
+        if (source_code === 'lib') {
+            targetUrl = `https://www.bahai.org/r/${source_page_id}`;
         } else {
-            console.warn(`[Nav] Title missing for PageID ${source_page_id}. Falling back to curid.`);
+            // 1. Resolve Base URL (Adjust domains if necessary)
+            let baseUrl = 'https://bahai.works'; 
+            if (source_code === 'bp') baseUrl = 'https://bahaipedia.org';
+            if (source_code === 'bd') baseUrl = 'https://bahaidata.org';
+            if (source_code === 'bm') baseUrl = 'https://bahai.media';
+
+            // MediaWiki standard URL pattern
+            targetUrl = `${baseUrl}/index.php?curid=${source_page_id}`;
+            if (title) {
+                const safeTitle = title.replace(/ /g, '_');
+                const prettyTitle = encodeURIComponent(safeTitle).replace(/%2F/g, '/');
+                targetUrl = `${baseUrl}/${prettyTitle}`;
+            } else {
+                console.warn(`[Nav] Title missing for PageID ${source_page_id}. Falling back to curid.`);
+            }
         }
 
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -101,7 +108,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     // Check 3: Hostname must match (prevents false positives across wikis)
                     const hostsMatch = currentUrlObj.hostname === targetUrlObj.hostname;
 
-                    isOnPage = hostsMatch && (pathsMatch || curidMatch);
+                    // [UPDATE] Check 4: Bahai.org Shortlink Logic
+                    // Since /r/ID redirects, we check if the current page *ends* with the ID hash
+                    // OR if we are literally on the /r/ page (rare, usually redirects fast)
+                    let libraryMatch = false;
+                    if (source_code === 'lib') {
+                         libraryMatch = currentUrlObj.href.includes(String(source_page_id)) || 
+                                        currentUrlObj.hash.includes(String(source_page_id));
+                    }
+
+                    isOnPage = hostsMatch && (pathsMatch || curidMatch || libraryMatch);
                 } catch (e) {
                     console.error("Error parsing URLs", e);
                 }
