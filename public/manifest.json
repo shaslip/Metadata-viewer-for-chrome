@@ -4,7 +4,6 @@
   "version": "1.0",
   "description": "Create and overlay knowledge graphs onto Bahá’í related text",
   "permissions": [
-    "cookies",
     "storage",
     "sidePanel",
     "contextMenus"
