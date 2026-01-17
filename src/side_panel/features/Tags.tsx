@@ -259,7 +259,7 @@ export const Tags = () => {
       if (parentSearchQuery && parentInputRef.current && parentSuggestions.length > 0) {
           const rect = parentInputRef.current.getBoundingClientRect();
           setParentDropdownPos({
-              // Distance from bottom of screen to TOP of input (so it sits on top)
+              // Matches the bottom of the screen to the top of the input (grows upwards)
               bottom: window.innerHeight - rect.top, 
               left: rect.left,
               width: rect.width
@@ -602,25 +602,32 @@ export const Tags = () => {
                           />
                           {/* Suggestions Dropdown */}
                           {parentSuggestions.length > 0 && createPortal(
-                            <ul className="absolute bottom-full mb-1 left-0 w-full bg-white border border-slate-200 rounded shadow-lg max-h-40 overflow-y-auto z-50"
-                              style={{
-                                  left: parentDropdownPos.left,
-                                  bottom: parentDropdownPos.bottom,
-                                  width: parentDropdownPos.width,
-                                  maxHeight: '50vh'
-                              }}
+                            <ul 
+                                className="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-2xl ring-1 ring-black/10 overflow-hidden"
+                                style={{
+                                    left: parentDropdownPos.left,
+                                    bottom: parentDropdownPos.bottom,
+                                    width: parentDropdownPos.width,
+                                    maxHeight: '50vh',
+                                    overflowY: 'auto'
+                                }}
                             >
+                              {/* Header */}
+                              <li className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                Suggested Parents
+                              </li>
+
                               {parentSuggestions.map(s => (
                                 <li 
                                   key={s.id} 
-                                  className="px-3 py-2 text-sm hover:bg-slate-50 cursor-pointer flex items-center gap-2"
+                                  className="px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2 text-slate-700 border-b border-slate-50 last:border-0"
                                   onClick={() => {
                                     setSelectedParent({ id: s.id, label: s.label });
                                     setParentSuggestions([]);
                                   }}
                                 >
-                                  <FolderIcon className="w-4 h-4 text-slate-400"/>
-                                  {s.label}
+                                  <FolderIcon className="w-4 h-4 text-blue-400 opacity-75"/>
+                                  <span className="truncate">{s.label}</span>
                                 </li>
                               ))}
                             </ul>,
