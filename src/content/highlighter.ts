@@ -582,7 +582,7 @@ const renderRelativeRange = (
         range.setEnd(node || anchorEl, node?.textContent?.length || 0);
         safeHighlightRange(range, unit);
     } else {
-        console.error(`[Highlighter] FAILED. Scanned ${nodesScanned} nodes, ${charCount} chars. Never reached StartOffset ${startOffset}.`);
+        console.error(`[Highlighter] FAILED. Scanned (0) nodes, ${charCount} chars. Never reached StartOffset ${startOffset}.`);
     }
 };
 
