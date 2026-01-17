@@ -115,18 +115,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     const pathsMatch = currentUrlObj.pathname === targetUrlObj.pathname;
                     
                     // Check 2: Legacy Curid Match (fallback)
-                    const curidMatch = currentTab.url.includes(`curid=${source_page_id}`);
+                    const curidMatch = currentTab.url.includes(`curid=${navId}`);
 
                     // Check 3: Hostname must match (prevents false positives across wikis)
                     const hostsMatch = currentUrlObj.hostname === targetUrlObj.hostname;
 
-                    // [UPDATE] Check 4: Bahai.org Shortlink Logic
-                    // Since /r/ID redirects, we check if the current page *ends* with the ID hash
-                    // OR if we are literally on the /r/ page (rare, usually redirects fast)
+                    // [UPDATE] Check 4: Bahai.org Shortlink Logic (Using navId)
                     let libraryMatch = false;
                     if (source_code === 'lib') {
-                         libraryMatch = currentUrlObj.href.includes(String(source_page_id)) || 
-                                        currentUrlObj.hash.includes(String(source_page_id));
+                          libraryMatch = currentUrlObj.href.includes(String(navId)) || 
+                                         currentUrlObj.hash.includes(String(navId));
                     }
 
                     isOnPage = hostsMatch && (pathsMatch || curidMatch || libraryMatch);
