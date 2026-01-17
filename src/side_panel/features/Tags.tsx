@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelection } from '@/side_panel/context/SelectionContext';
 import { TaxonomyExplorer } from './TaxonomyExplorer';
 import { TagInput, Tag } from '../components/TagInput';
@@ -30,6 +31,8 @@ export const Tags = () => {
   // Edit Tree Mode
   const [isEditMode, setIsEditMode] = useState(false);
   const [treeChanges, setTreeChanges] = useState<{id: number, parent_id: number | null}[]>([]);
+  const parentInputRef = useRef<HTMLInputElement>(null);
+  const [parentDropdownPos, setParentDropdownPos] = useState({ bottom: 0, left: 0, width: 0 });
   
   // Editor State
   const [editingUnit, setEditingUnit] = useState<LogicalUnit | null>(null);
@@ -220,7 +223,7 @@ export const Tags = () => {
     }
   };
 
-  // [NEW] Search for parents when user types in Modify Pane
+  // Search for parents when user types in Modify Pane
   useEffect(() => {
     if (!editingTag || !parentSearchQuery) {
         setParentSuggestions([]);
@@ -237,7 +240,7 @@ export const Tags = () => {
     return () => clearTimeout(timer);
   }, [parentSearchQuery, editingTag]);
 
-  // [NEW] Quick Create from Tree Filter
+  // Quick Create from Tree Filter
   const handleQuickCreate = async (label: string) => {
     if (!label.trim()) return;
     setIsSaving(true);
@@ -252,7 +255,19 @@ export const Tags = () => {
     }
   };
 
-  // [CHANGED] Combined Rename + Move Logic
+  useEffect(() => {
+      if (parentSearchQuery && parentInputRef.current && parentSuggestions.length > 0) {
+          const rect = parentInputRef.current.getBoundingClientRect();
+          setParentDropdownPos({
+              // Distance from bottom of screen to TOP of input (so it sits on top)
+              bottom: window.innerHeight - rect.top, 
+              left: rect.left,
+              width: rect.width
+          });
+      }
+  }, [parentSearchQuery, parentSuggestions]);
+
+  // Combined Rename + Move Logic
   const handleModifyTag = async () => {
       if (!editingTag || !editingTag.label.trim()) return;
       setIsSaving(true);
@@ -578,6 +593,7 @@ export const Tags = () => {
                       ) : (
                         <>
                           <input 
+                            ref={parentInputRef}
                             type="text" 
                             className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                             placeholder="Type to find a parent category..."
@@ -585,8 +601,15 @@ export const Tags = () => {
                             onChange={(e) => setParentSearchQuery(e.target.value)}
                           />
                           {/* Suggestions Dropdown */}
-                          {parentSuggestions.length > 0 && (
-                            <ul className="absolute bottom-full mb-1 left-0 w-full bg-white border border-slate-200 rounded shadow-lg max-h-40 overflow-y-auto z-50">
+                          {parentSuggestions.length > 0 && createPortal(
+                            <ul className="absolute bottom-full mb-1 left-0 w-full bg-white border border-slate-200 rounded shadow-lg max-h-40 overflow-y-auto z-50"
+                              style={{
+                                  left: parentDropdownPos.left,
+                                  bottom: parentDropdownPos.bottom,
+                                  width: parentDropdownPos.width,
+                                  maxHeight: '50vh'
+                              }}
+                            >
                               {parentSuggestions.map(s => (
                                 <li 
                                   key={s.id} 
