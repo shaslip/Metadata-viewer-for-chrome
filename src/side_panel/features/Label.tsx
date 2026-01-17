@@ -24,34 +24,24 @@ export const Label = () => {
     }
   }, [selectedUnit]);
 
-  // Fetch Page Stats (Count of units)
   // FETCH STATS
   useEffect(() => {
     const fetchStats = async () => {
-        // Only run in Idle state
         if (!currentSelection && !selectedUnit) {
             try {
-                // 1. Get Active Tab
                 const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-                if (!tabs[0]?.id) return;
-
-                // 2. Ask Content Script for Page Metadata (Source/ID)
-                const meta = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_PAGE_METADATA' }).catch(() => null);
-                
-                if (meta && meta.source_page_id) {
-                     // 3. Query API for units on this page
-                     const units = await get(`/api/units?source_page_id=${meta.source_page_id}`);
-                     if (units && units.length > 0) {
+                if (tabs[0]?.id) {
+                    // Send message to highlighter.ts
+                    const res = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_CACHED_STATS' }).catch(() => null);
+                    if (res) {
                          setPageStats({
-                             count: units.length,
-                             snippet: units[0].text_content
+                             count: res.count || 0,
+                             snippet: res.snippet || ""
                          });
-                     } else {
-                         setPageStats({ count: 0, snippet: '' });
-                     }
+                    }
                 }
             } catch (e) { 
-                console.log("Could not fetch page stats", e);
+                // Ignore errors (e.g. content script not ready)
             }
         }
     };
