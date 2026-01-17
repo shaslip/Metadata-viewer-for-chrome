@@ -7,10 +7,12 @@ import { CURRENT_SITE } from '@/utils/site_config';
 let cachedUnits: LogicalUnit[] = [];
 let currentMode: string = 'TAXONOMY_MODE';
 let pendingScrollId: number | null = null;
+const fetchedIds = new Set<string>();
 
 // Constants for Healer
 const ANCHOR_RETRY_SIZES = [50, 20];
 const SEARCH_RADIUS = 2000;
+const BATCH_DELAY = 1000;
 
 export const initHighlighter = async () => {
     // 1. Load active mode
@@ -19,74 +21,150 @@ export const initHighlighter = async () => {
         currentMode = storageResult.highlightMode;
     }
     
-    // Define helper first
-    const fetchAndRender = async () => {
-        const meta = getPageMetadata(); 
-
-        if (!meta.source_code || !meta.source_page_id) {
-            console.warn("Highlighter: Missing metadata, skipping fetch.");
-            return;
-        }
-
-        const response = await chrome.runtime.sendMessage({
-            type: 'FETCH_PAGE_DATA',
-            source_code: meta.source_code,
-            source_page_id: meta.source_page_id
-        });
-
-        if (response && response.units) {
-            cachedUnits = response.units;
-            
-            // [NEW] Run the Healer before rendering
-            await verifyAndHealUnits();
-            
-            renderHighlights(); 
-        }
-    };
-
-    // 2. REGISTER LISTENER FIRST
+    // 2. Setup Listeners
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        
         if (request.type === 'GET_PAGE_CONTEXT') {
-            const meta = getPageMetadata();
-            sendResponse(meta);
+            sendResponse(getPageMetadata());
             return true; 
         }
-
         if (request.type === 'UPDATE_HIGHLIGHTS' && Array.isArray(request.units)) {
             const incomingIds = new Set(request.units.map((u: any) => u.id));
-            // Remove old versions of incoming units, then add new ones
             cachedUnits = [
                 ...cachedUnits.filter(u => !incomingIds.has(u.id)), 
                 ...request.units
             ];
-
-            verifyAndHealUnits(); 
+            // Re-run healer only on new units if needed, or just render
+            if (CURRENT_SITE.code !== 'lib') verifyAndHealUnits(); 
+            renderHighlights(); 
         }
-
         if (request.type === 'TRIGGER_DATA_RELOAD') {
-            fetchAndRender();
+            if (CURRENT_SITE.code === 'lib') scanAndFetchLibIds();
+            else fetchAndRenderPage();
         }
-
         if (request.type === 'SCROLL_TO_UNIT') {
             pendingScrollId = request.unit_id;
-            if (cachedUnits.length > 0) {
-                attemptScroll();
-            }
+            if (cachedUnits.length > 0) attemptScroll();
             sendResponse({ success: true });
         }
     });
 
-    // 3. Initial Fetch
-    await fetchAndRender();
-
-    // 4. Listen to Storage changes
     chrome.storage.onChanged.addListener((changes, area) => {
         if (area === 'local' && changes.highlightMode) {
             currentMode = changes.highlightMode.newValue;
             renderHighlights();
         }
     });
+
+    // 3. Initial Load Strategy
+    if (CURRENT_SITE.code === 'lib') {
+        // [NEW] Lib Strategy: Scan DOM + Observer
+        scanAndFetchLibIds();
+        setupLibObserver();
+    } else {
+        // Standard Wiki Strategy: Fetch by Page ID
+        await fetchAndRenderPage();
+    }
+};
+
+// [NEW] Standard Fetch (MediaWiki)
+const fetchAndRenderPage = async () => {
+    const meta = getPageMetadata(); 
+    if (!meta.source_code || !meta.source_page_id) return;
+
+    const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_PAGE_DATA',
+        source_code: meta.source_code,
+        source_page_id: meta.source_page_id
+    });
+
+    if (response && response.units) {
+        cachedUnits = response.units;
+        await verifyAndHealUnits();
+        renderHighlights(); 
+    }
+};
+
+// [NEW] Lib Strategy: Observer for Lazy Loading
+let observerTimeout: any;
+const setupLibObserver = () => {
+    const observer = new MutationObserver((mutations) => {
+        let shouldScan = false;
+        for (const m of mutations) {
+            // Only care if nodes were added
+            if (m.addedNodes.length > 0) {
+                shouldScan = true;
+                break;
+            }
+        }
+
+        if (shouldScan) {
+            clearTimeout(observerTimeout);
+            observerTimeout = setTimeout(scanAndFetchLibIds, BATCH_DELAY);
+        }
+    });
+
+    // Watch the reader canvas or body
+    const target = document.querySelector('.reader-canvas') || document.body;
+    observer.observe(target, { childList: true, subtree: true });
+};
+
+// [NEW] Lib Strategy: Scanner
+const scanAndFetchLibIds = async () => {
+    // 1. Find all potential IDs in the DOM
+    const anchors = document.querySelectorAll('.brl-location[id]');
+    const newIds: number[] = [];
+
+    anchors.forEach(el => {
+        const idStr = el.id;
+        if (!fetchedIds.has(idStr)) {
+            const idNum = parseInt(idStr, 10);
+            if (!isNaN(idNum)) {
+                fetchedIds.add(idStr);
+                newIds.push(idNum);
+            }
+        }
+    });
+
+    if (newIds.length === 0) return;
+
+    console.log(`[Highlighter] Found ${newIds.length} new fragments. Fetching units...`);
+
+    // 2. Batch Fetch
+    // NOTE: You will need to handle 'FETCH_BATCH_DATA' in your background script
+    // OR loop through FETCH_PAGE_DATA if backend update isn't possible right now.
+    // Assuming backend can handle a list or we loop:
+    
+    // OPTION A: Loop (No backend changes needed immediately, but chatty)
+    /*
+    for (const id of newIds) {
+        chrome.runtime.sendMessage({
+            type: 'FETCH_PAGE_DATA',
+            source_code: 'lib',
+            source_page_id: id
+        }).then(response => {
+            if (response && response.units && response.units.length > 0) {
+                cachedUnits = [...cachedUnits, ...response.units];
+                renderHighlights();
+            }
+        });
+    }
+    */
+
+    // OPTION B: Batch (Recommended - requires Backend support)
+    const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_BATCH_DATA',
+        source_code: 'lib',
+        page_ids: newIds
+    });
+
+    if (response && response.units) {
+        // Merge to avoid duplicates
+        const existingIds = new Set(cachedUnits.map(u => u.id));
+        const uniqueNew = response.units.filter((u: any) => !existingIds.has(u.id));
+        
+        cachedUnits = [...cachedUnits, ...uniqueNew];
+        renderHighlights();
+    }
 };
 
 // Helper: Extract ONLY visible text
