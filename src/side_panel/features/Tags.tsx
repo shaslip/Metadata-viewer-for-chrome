@@ -475,7 +475,7 @@ export const Tags = () => {
             }`}
           >
             <BuildingLibraryIcon className="w-3 h-3 mr-1" />
-            View Examples
+            View Example
           </button>
         </div>
         
