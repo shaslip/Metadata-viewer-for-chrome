@@ -106,6 +106,13 @@ const handleSelection = () => {
             }
         }
 
+        // [DEBUG]
+        console.log("--- [V1 CHECK] Content Script Payload ---", {
+            hasAnchors: "connected_anchors" in payload,
+            anchorsValue: payload.connected_anchors,
+            fullPayload: payload
+        });
+
         chrome.runtime.sendMessage(payload);
 
     }, 500);
