@@ -112,39 +112,54 @@ const setupLibObserver = () => {
 };
 
 // Lib Strategy: Scanner
-const scanAndFetchLibIds = async () => {
+const scanAndFetchLibIds = async (forceRefresh = false) => {
     // 1. Find all potential IDs in the DOM
     const anchors = document.querySelectorAll('.brl-location[id]');
-    const newIds: number[] = [];
+    const idsToFetch: number[] = [];
 
     anchors.forEach(el => {
         const idStr = el.id;
-        if (!fetchedIds.has(idStr)) {
+        
+        // [FIX] If forceRefresh is true, we fetch it even if we've seen it before
+        if (forceRefresh || !fetchedIds.has(idStr)) {
             const idNum = parseInt(idStr, 10);
             if (!isNaN(idNum)) {
-                fetchedIds.add(idStr);
-                newIds.push(idNum);
+                // If forcing, don't re-add to Set (it's already there), just add to fetch list
+                if (!fetchedIds.has(idStr)) fetchedIds.add(idStr);
+                idsToFetch.push(idNum);
             }
         }
     });
 
-    if (newIds.length === 0) return;
+    if (idsToFetch.length === 0) return;
 
-    console.log(`[Highlighter] Found ${newIds.length} new fragments. Fetching units...`);
+    console.log(`[Highlighter] Batch fetching ${idsToFetch.length} IDs (Force: ${forceRefresh})...`);
 
-    // Batch (Recommended - requires Backend support)
+    // Batch Fetch
     const response = await chrome.runtime.sendMessage({
         type: 'FETCH_BATCH_DATA',
         source_code: 'lib',
-        page_ids: newIds
+        page_ids: idsToFetch
     });
 
     if (response && response.units) {
-        // Merge to avoid duplicates
-        const existingIds = new Set(cachedUnits.map(u => u.id));
-        const uniqueNew = response.units.filter((u: any) => !existingIds.has(u.id));
-        
-        cachedUnits = [...cachedUnits, ...uniqueNew];
+        if (forceRefresh) {
+            // [FIX] If forcing, we need to REPLACE cached units for these IDs, not just append
+            // 1. Identify IDs we just fetched
+            const fetchedIdSet = new Set(idsToFetch);
+            
+            // 2. Remove old versions of units belonging to these pages
+            cachedUnits = cachedUnits.filter(u => !fetchedIdSet.has(u.source_page_id));
+            
+            // 3. Add new versions
+            cachedUnits = [...cachedUnits, ...response.units];
+        } else {
+            // Old "Lazy Load" behavior (Append only)
+            const existingIds = new Set(cachedUnits.map(u => u.id));
+            const uniqueNew = response.units.filter((u: any) => !existingIds.has(u.id));
+            cachedUnits = [...cachedUnits, ...uniqueNew];
+        }
+
         renderHighlights();
     }
 };
