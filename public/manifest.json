@@ -9,9 +9,9 @@
     "contextMenus"
   ],
   "host_permissions": [
-    "*://*.bahai.works/*",
-    "*://*.bahai.org/library/*",
-    "*://digitalbahairesources.org/*"
+    "https://*.bahai.works/*",
+    "https://*.bahai.org/library/*",
+    "https://digitalbahairesources.org/*"
   ],
   "background": {
     "service_worker": "src/service_worker/service_worker.js"
