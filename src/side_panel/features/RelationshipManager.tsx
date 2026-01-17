@@ -177,6 +177,7 @@ export const RelationshipManager = () => {
           text_content: subject.text,
           start_char_index: subject.offsets.start,
           end_char_index: subject.offsets.end,
+          connected_anchors: (subject as any).connected_anchors || [],
           author: subjectAuthor,
           unit_type: "link_subject"
         });
@@ -193,6 +194,7 @@ export const RelationshipManager = () => {
           text_content: object.text,
           start_char_index: object.offsets.start,
           end_char_index: object.offsets.end,
+          connected_anchors: (object as any).connected_anchors || [],
           author: objectAuthor,
           unit_type: "link_object"
         });
