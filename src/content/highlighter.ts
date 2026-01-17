@@ -38,8 +38,11 @@ export const initHighlighter = async () => {
             renderHighlights(); 
         }
         if (request.type === 'TRIGGER_DATA_RELOAD') {
-            if (CURRENT_SITE.code === 'lib') scanAndFetchLibIds();
-            else fetchAndRenderPage();
+            if (CURRENT_SITE.code === 'lib') {
+                scanAndFetchLibIds(true);
+            } else {
+                fetchAndRenderPage();
+            }
         }
         if (request.type === 'SCROLL_TO_UNIT') {
             pendingScrollId = request.unit_id;
