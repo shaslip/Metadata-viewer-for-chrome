@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Catalog Manager for Bahá’í Text",
+  "name": "Bahá’í Text Annotation Tool",
   "version": "1.0",
   "description": "Create and overlay knowledge graphs onto Bahá’í related text",
   "permissions": [
@@ -12,6 +12,7 @@
   ],
   "host_permissions": [
     "*://*.bahai.works/*",
+    "*://*.bahai.org/library/*",
     "*://digitalbahairesources.org/*",
     "http://localhost:3008/*"
   ],
@@ -21,7 +22,8 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.bahai.works/*"
+        "*://*.bahai.works/*",
+        "*://*.bahai.org/library/*",        
       ],
       "js": ["src/content/content.js"],
       "css": ["assets/index.css"],
