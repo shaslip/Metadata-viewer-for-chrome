@@ -623,7 +623,8 @@ export const Tags = () => {
                                   {s.label}
                                 </li>
                               ))}
-                            </ul>
+                            </ul>,
+                            document.body
                           )}
                         </>
                       )}
