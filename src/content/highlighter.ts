@@ -1,6 +1,7 @@
 import { getPageMetadata } from './scraper';
-import { findRangeFromOffsets } from '@/utils/offset_calculator';
+import { findRangeFromOffsets } from '@/utils/offset_calculator'; // Only used for mediawiki
 import { LogicalUnit } from '@/utils/types';
+import { CURRENT_SITE } from '@/utils/site_config';
 
 // --- Global State for Highlighter ---
 let cachedUnits: LogicalUnit[] = [];
@@ -417,16 +418,108 @@ const attemptScroll = (attempts = 10) => {
     }
 };
 
+// Main Highlight Loop
 const highlightUnit = (unit: LogicalUnit) => {
     try {
-        const range = findRangeFromOffsets(unit.start_char_index, unit.end_char_index);
-        
-        if (!range) {
-            return;
+        if (CURRENT_SITE.code === 'lib') {
+            highlightLibUnit(unit);
+        } else {
+            // Existing MediaWiki Logic
+            const range = findRangeFromOffsets(unit.start_char_index, unit.end_char_index);
+            if (range) safeHighlightRange(range, unit);
         }
-        safeHighlightRange(range, unit);
     } catch (e) {
         console.error("Highlight error for unit", unit.id, e);
+    }
+};
+
+// Logic for Bahai.org
+const highlightLibUnit = (unit: LogicalUnit) => {
+    const startId = unit.source_page_id;
+    const connected = unit.connected_anchors || [];
+    
+    // We check if any of the involved anchors are currently visible in the DOM
+    // 1. Check Start Anchor
+    const startEl = document.getElementById(String(startId));
+    if (startEl) {
+        if (connected.length === 0) {
+            // A. Single Paragraph Highlight
+            renderRelativeRange(startEl, unit.start_char_index, unit.end_char_index, unit);
+        } else {
+            // B. Multi-Paragraph: START segment (Start -> End of Block)
+            // We use a large number (99999) to signify "End of Block" safely
+            renderRelativeRange(startEl, unit.start_char_index, 99999, unit);
+        }
+    }
+
+    // 2. Check Connected Anchors (Middle & End)
+    connected.forEach((anchorId, index) => {
+        const anchorEl = document.getElementById(String(anchorId));
+        if (!anchorEl) return; // Not visible, skip
+
+        const isLast = index === connected.length - 1;
+
+        if (isLast) {
+            // C. Multi-Paragraph: END segment (Start of Block -> End Index)
+            renderRelativeRange(anchorEl, 0, unit.end_char_index, unit);
+        } else {
+            // D. Multi-Paragraph: MIDDLE segment (Full Block)
+            renderRelativeRange(anchorEl, 0, 99999, unit);
+        }
+    });
+};
+
+// Helper to Create Range relative to an Anchor
+const renderRelativeRange = (anchorEl: HTMLElement, startOffset: number, endOffset: number, unit: LogicalUnit) => {
+    const range = document.createRange();
+    
+    // Set Start
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    walker.currentNode = anchorEl;
+
+    let charCount = 0;
+    let startFound = false;
+    let node;
+
+    // A. FIND START
+    while ((node = walker.nextNode())) {
+        const len = node.textContent?.length || 0;
+        
+        if (!startFound) {
+            if (charCount + len >= startOffset) {
+                range.setStart(node, startOffset - charCount);
+                startFound = true;
+            }
+        }
+        
+        // B. FIND END (Once start is found)
+        if (startFound) {
+             // Stop if we hit the next anchor (Block Boundary)
+             // We do this check by looking at the parent of the text node
+             if (node.parentElement?.closest('.brl-location') || node.parentElement?.querySelector('.brl-location')) {
+                 // Safety Break: We hit another anchor. Cap the selection here.
+                 range.setEnd(node, len);
+                 break;
+             }
+
+             if (charCount + len >= endOffset) {
+                 range.setEnd(node, endOffset - charCount);
+                 safeHighlightRange(range, unit); // RENDER
+                 return;
+             }
+        }
+        
+        charCount += len;
+        
+        // Safety Break: Stop after reasonable length to prevent infinite loop
+        if (charCount > 50000) break; 
+    }
+    
+    // If we ran out of nodes but haven't capped end (e.g. End of Block case 99999)
+    if (startFound) {
+        // Just set end to the end of the last node visited
+        range.setEnd(node || anchorEl, node?.textContent?.length || 0);
+        safeHighlightRange(range, unit);
     }
 };
 
