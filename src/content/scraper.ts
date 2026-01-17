@@ -78,8 +78,15 @@ export const getPageMetadata = (): PageMetadata => {
         if (revJsonMatch) revId = parseInt(revJsonMatch[1]);
         else if (revVarMatch) revId = parseInt(revVarMatch[1]);
     } else {
-        // FIX: Use the hash function to generate unique IDs for library page
-        pageId = getPathHash(window.location.pathname);
+        // This matches your DB structure where source_page_id = Anchor ID
+        const urlHash = window.location.hash.replace('#', '');
+        if (urlHash && /^\d+$/.test(urlHash)) {
+            pageId = parseInt(urlHash, 10);
+            console.log(`[Scraper] Using Hash ID: ${pageId}`);
+        } else {
+            // Fallback to path hash (likely won't match granular articles, but keeps ID stable)
+            pageId = getPathHash(window.location.pathname);
+        }
     }
 
     // [UPDATE] Split by " - " OR " | " to handle Bahai.org titles correctly
