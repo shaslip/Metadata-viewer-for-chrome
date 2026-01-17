@@ -42,7 +42,7 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
         <div className="w-16 h-16 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-2xl font-bold">
           B
         </div>
-        <h2 className="mt-4 text-xl font-bold text-slate-800">RAG Librarian</h2>
+        <h2 className="mt-4 text-xl font-bold text-slate-800">Text Annotation Tool</h2>
       </div>
 
       {error && (
@@ -54,7 +54,7 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
       <form onSubmit={handleConnect} className="w-full space-y-3">
         <input 
           type="text" 
-          placeholder="Username (e.g. Sarah@RAGLibrarian)"
+          placeholder="Username (e.g. Sarah@Annotation)"
           className="w-full p-2 text-sm border rounded"
           value={username}
           onChange={e => setUsername(e.target.value)}
@@ -81,8 +81,8 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
       <div className="mt-6 text-xs text-slate-400 text-left">
         <p className="mb-1 font-semibold">How to get a Bot Password:</p>
         <ol className="list-decimal pl-4 space-y-1">
-          <li>Go to <b>Special:BotPasswords</b> on Bahai.works</li>
-          <li>Create a new bot (e.g. named "RAGLibrarian")</li>
+          <li>Go to <a href="https://bahai.works/Special:BotPasswords">Special:BotPasswords</a> on Bahai.works</li>
+          <li>Create a new bot (e.g. named "AnnotationTool")</li>
           <li>Grant it <b>High-volume editing</b> (or basic rights)</li>
           <li>Copy the password generated there.</li>
         </ol>
