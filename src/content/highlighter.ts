@@ -149,7 +149,7 @@ const scanAndFetchLibIds = async (forceRefresh = false) => {
             const fetchedIdSet = new Set(idsToFetch);
             
             // 2. Remove old versions of units belonging to these pages
-            cachedUnits = cachedUnits.filter(u => !fetchedIdSet.has(u.source_page_id));
+            cachedUnits = cachedUnits.filter(u => u.source_page_id !== undefined && !fetchedIdSet.has(u.source_page_id));
             
             // 3. Add new versions
             cachedUnits = [...cachedUnits, ...response.units];
