@@ -17,7 +17,8 @@ export const useApi = () => {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-Client-Version': manifest.version
       },
       body: body ? JSON.stringify(body) : undefined
     });
