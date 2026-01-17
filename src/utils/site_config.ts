@@ -14,11 +14,10 @@ export const getSiteConfig = (): SiteConfig => {
         return { code: 'bp', contentSelector: '#mw-content-text', isMediaWiki: true };
     }
     else if (hostname.includes('bahai.org')) {
-        // bahai.org/library specific container
-        return { code: 'lib', contentSelector: '#content', isMediaWiki: false };
+        // We target the dynamic content wrapper
+        return { code: 'lib', contentSelector: '.library-document-content', isMediaWiki: false };
     }
 
-    // Default fallback (likely won't run, but safe)
     return { code: 'bw', contentSelector: '#mw-content-text', isMediaWiki: true };
 };
 
