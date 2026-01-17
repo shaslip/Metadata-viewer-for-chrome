@@ -587,8 +587,6 @@ const renderRelativeRange = (
     unit: LogicalUnit, 
     scopeEl: HTMLElement
 ) => {
-    const range = document.createRange();
-    
     // 1. Start walker at Scope
     const walker = document.createTreeWalker(scopeEl, NodeFilter.SHOW_TEXT);
     
@@ -596,17 +594,19 @@ const renderRelativeRange = (
     let startFound = false;
     let node;
 
+    // [FIX] Store the range to highlight, do NOT highlight inside the loop
+    let targetRange: Range | null = null; 
+
     console.log(`[Highlighter] Starting Scan for Unit ${unit.id}. Offset Goal: ${startOffset}. Scope text length: ${scopeEl.textContent?.length}`);
 
     while ((node = walker.nextNode())) {
         // 2. STRICT ORDERING: Ignore text that physically precedes the anchor
         if (anchorEl !== scopeEl) {
-            // compareDocumentPosition: 4 means Node follows Anchor.
             const position = anchorEl.compareDocumentPosition(node);
             if (!(position & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
         }
 
-        // 3. NOISE FILTER: Ignore Page Numbers & Empty Anchors
+        // 3. NOISE FILTER
         if (node.parentElement?.closest('.brl-pnum')) continue;
         if (node.parentElement?.classList.contains('brl-location')) continue;
 
@@ -616,38 +616,49 @@ const renderRelativeRange = (
         if (!startFound) {
             if (charCount + len >= startOffset) {
                 console.log(`[Highlighter] START FOUND in node: "${node.textContent?.substring(0,20)}..." at offset ${startOffset - charCount}`);
-                range.setStart(node, startOffset - charCount);
+                
+                targetRange = document.createRange();
+                targetRange.setStart(node, startOffset - charCount);
                 startFound = true;
             }
         }
         
         // B. FIND END
-        if (startFound) {
+        if (startFound && targetRange) {
              if (charCount + len >= endOffset) {
                  console.log(`[Highlighter] END FOUND in node: "${node.textContent?.substring(0,20)}..." at offset ${endOffset - charCount}`);
-                 range.setEnd(node, endOffset - charCount);
-                 safeHighlightRange(range, unit); 
-                 return;
+                 targetRange.setEnd(node, endOffset - charCount);
+                 safeHighlightRange(targetRange, unit); 
+                 return; // Done
              }
         }
         
-        // Only increment if we are actively scanning valid text
         charCount += len;
-        
-        if (charCount > 50000) {
-            console.warn(`[Highlighter] Force break: >50k chars scanned.`);
-            break; 
-        }
     }
     
-    // C. Handle "Rest of Paragraph"
-    if (startFound) {
-        console.log(`[Highlighter] Reached End of Scope. capping selection.`);
-        range.setEnd(node || anchorEl, node?.textContent?.length || 0);
-        safeHighlightRange(range, unit);
+    // C. Handle "Rest of Paragraph" (Cap selection at the end of the last valid node found)
+    if (startFound && targetRange) {
+        console.log(`[Highlighter] Reached End of Scope. Capping selection.`);
+        // We need to set the end to the very last text node we visited
+        // Since 'node' is null now, we trust the range is open-ended. 
+        // We find the last text node in the scope manually to close the range.
+        const lastNode = findLastTextNode(scopeEl);
+        if (lastNode) {
+            targetRange.setEnd(lastNode, lastNode.textContent?.length || 0);
+            safeHighlightRange(targetRange, unit);
+        }
     } else {
-        console.error(`[Highlighter] FAILED. Scanned (0) nodes, ${charCount} chars. Never reached StartOffset ${startOffset}.`);
+        console.error(`[Highlighter] FAILED. Scanned ${charCount} chars. Never reached StartOffset ${startOffset}.`);
     }
+};
+
+// [NEW HELPER] needed for the fix above
+const findLastTextNode = (el: HTMLElement): Node | null => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let last: Node | null = null;
+    let curr;
+    while(curr = walker.nextNode()) last = curr;
+    return last;
 };
 
 const safeHighlightRange = (range: Range, unit: LogicalUnit) => {
