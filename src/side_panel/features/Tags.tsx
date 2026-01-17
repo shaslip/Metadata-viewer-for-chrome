@@ -131,6 +131,7 @@ export const Tags = () => {
         if (unit.broken_index) {
              setEditingUnit(unit);
              setRepairSelection(null);
+             setRevealUnitId(unit.id || null);
              return; 
         }
 
