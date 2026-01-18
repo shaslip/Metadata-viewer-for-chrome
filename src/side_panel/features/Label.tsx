@@ -49,7 +49,6 @@ export const Label = () => {
     fetchStats();
   }, [currentSelection, selectedUnit]);
 
-  // [FIX] Pass title to Service Worker
   const handleUnitJump = (unit: typeof pageUnits[0]) => {
       chrome.runtime.sendMessage({ 
           type: 'NAVIGATE_TO_UNIT', 
@@ -71,6 +70,9 @@ export const Label = () => {
       clearSelection();
       setRepairTarget(null);
   };
+
+  // Helper to Capitalize First Letter
+  const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 
   // 1. Repair Mode
   if (repairTarget) {
@@ -131,7 +133,6 @@ export const Label = () => {
   // 4. Idle State
   return (
     <div className="p-4 space-y-6 h-full flex flex-col">
-        {/* Header matches Q&A exactly */}
         <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 group relative">
                 <h2 className="text-lg font-bold text-slate-800">
@@ -147,7 +148,6 @@ export const Label = () => {
             </div>
         </div>
 
-        {/* List of Units */}
         {pageUnits.length > 0 ? (
             <div className="bg-blue-50 rounded border border-blue-100 p-3 animate-in fade-in duration-500 flex flex-col h-full overflow-hidden">
                 <p className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide border-b border-blue-200 pb-1 flex-shrink-0">
@@ -168,12 +168,12 @@ export const Label = () => {
                                 </span>
                             </div>
                             
-                            {/* NEW METADATA LINE */}
+                            {/* CLEAN METADATA LINE */}
                             <div className="w-full text-right mt-1 border-t border-slate-50 pt-1">
-                                <span className="text-[10px] text-slate-400 group-hover:text-blue-500 font-medium uppercase tracking-tight">
-                                    Author: <span className="text-slate-600 group-hover:text-blue-700">{unit.author || 'Unknown'}</span>
+                                <span className="text-[10px] text-slate-500 group-hover:text-blue-600 font-medium">
+                                    Author: {unit.author || 'Unknown'}
                                     <span className="mx-1">•</span>
-                                    Type: <span className="text-slate-600 group-hover:text-blue-700">{unit.unit_type}</span>
+                                    Type: {capitalize(unit.unit_type)}
                                 </span>
                             </div>
                         </button>
