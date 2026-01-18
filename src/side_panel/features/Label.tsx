@@ -8,13 +8,14 @@ import { LogicalUnit } from '@/utils/types';
 export const Label = () => {
   const { currentSelection, selectedUnit, clearSelection } = useSelection();
   const { get } = useApi();
-  
+
   const [repairTarget, setRepairTarget] = useState<LogicalUnit | null>(null);
-  
+
   const [pageUnits, setPageUnits] = useState<{
-      id: number, 
-      text_content: string, 
+      id: number,
+      text_content: string,
       unit_type: string,
+      author?: string,
       source_code: string,
       source_page_id: number,
       title?: string,
@@ -158,12 +159,23 @@ export const Label = () => {
                         <button 
                             key={unit.id}
                             onClick={() => handleUnitJump(unit)}
-                            className="w-full text-left bg-white p-2 rounded border border-blue-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group flex items-start gap-2"
+                            className="w-full text-left bg-white p-2 rounded border border-blue-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group flex flex-col gap-1"
                         >
-                            <DocumentTextIcon className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0 group-hover:text-blue-600" />
-                            <span className="text-xs text-slate-600 font-serif italic line-clamp-2 group-hover:text-slate-800 break-words">
-                                "{unit.text_content}"
-                            </span>
+                            <div className="flex items-start gap-2">
+                                <DocumentTextIcon className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0 group-hover:text-blue-600" />
+                                <span className="text-xs text-slate-600 font-serif italic line-clamp-2 group-hover:text-slate-800 break-words">
+                                    "{unit.text_content}"
+                                </span>
+                            </div>
+                            
+                            {/* NEW METADATA LINE */}
+                            <div className="w-full text-right mt-1 border-t border-slate-50 pt-1">
+                                <span className="text-[10px] text-slate-400 group-hover:text-blue-500 font-medium uppercase tracking-tight">
+                                    Author: <span className="text-slate-600 group-hover:text-blue-700">{unit.author || 'Unknown'}</span>
+                                    <span className="mx-1">•</span>
+                                    Type: <span className="text-slate-600 group-hover:text-blue-700">{unit.unit_type}</span>
+                                </span>
+                            </div>
                         </button>
                     ))}
                 </div>
