@@ -142,7 +142,7 @@ export const Label = () => {
                 
                 <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
                     <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
-                    <p>Highlight a tablet, prayer, or historical account to label it. This allows the RAG system to understand the specific type of content.</p>
+                    <p>Highlight a tablet, prayer, or historical account to label it.</p>
                     <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800"></div>
                 </div>
             </div>
