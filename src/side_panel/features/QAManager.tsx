@@ -17,6 +17,17 @@ export const QAManager = () => {
   const [answer, setAnswer] = useState<StagedAnswer | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isAutoDetected, setIsAutoDetected] = useState(false);
+
+  useEffect(() => {
+    if (currentSelection?.context?.author && currentSelection.context.author !== 'Undefined') {
+        setAuthor(currentSelection.context.author);
+        setIsAutoDetected(true);
+    } else if (!selectedUnit) {
+        // Only reset if we aren't editing an existing unit
+        setIsAutoDetected(false);
+    }
+  }, [currentSelection, selectedUnit]);
 
   // --- 1. Edit Mode: Load existing QA ---
   useEffect(() => {
@@ -232,9 +243,10 @@ export const QAManager = () => {
       <div>
         <label className="block text-xs font-semibold text-slate-600 mb-1">ANSWER AUTHOR</label>
         <select 
-          className="w-full p-2 text-sm border rounded bg-white"
+          className="w-full p-2 text-sm border rounded bg-white disabled:bg-slate-100 disabled:text-slate-500"
           value={author}
           onChange={e => setAuthor(e.target.value)}
+          disabled={isAutoDetected}
         >
           <option>Bahá’u’lláh</option>
           <option>The Báb</option>
