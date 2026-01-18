@@ -4,14 +4,13 @@ import { useSelection } from '@/side_panel/context/SelectionContext';
 import { useApi } from '@/hooks/useApi';
 import { StagedItem } from '@/utils/types';
 
-// Standardized List for RAG Priority
 const AUTHOR_OPTIONS = [
   "Bahá’u’lláh",
   "The Báb",
   "‘Abdu’l-Bahá",
   "Shoghi Effendi",
   "Universal House of Justice",
-  "Other" // Maps to "All others" bucket
+  "Other"
 ];
 
 export const RelationshipManager = () => {
@@ -24,63 +23,83 @@ export const RelationshipManager = () => {
   const [relType, setRelType] = useState('commentary');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Store relationships found on this page
   const [pageRelationships, setPageRelationships] = useState<any[]>([]);
   const [currentPageId, setCurrentPageId] = useState<number>(0);
 
-  // Load existing relationships AND preserve standard units
   useEffect(() => {
     const fetchAndHighlight = async () => {
-      // 1. Get current page context
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
 
-      // 2. Fetch Base Layer (Standard Units: Tablets, Prayers, etc.)
-      // We do this to ensure we don't WIPE them when we apply the relationship overlay.
-      let standardUnits: any[] = [];
-      try {
-        const stats = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CACHED_STATS' }).catch(() => null);
-        if (stats && stats.units) {
-          // Filter out previous relationship highlights so we don't duplicate them
-          standardUnits = stats.units.filter((u: any) => 
-            !['link_subject', 'link_object', 'user_highlight'].includes(u.unit_type)
-          );
-        }
-      } catch (e) {
-        console.warn("Could not fetch cached stats, defaulting to empty base layer.");
-      }
-
-      // 3. Get Metadata for API Call
+      // 1. Get Page Metadata
       const metadata = await chrome.tabs.sendMessage(tab.id, { type: 'GET_METADATA' }).catch(() => null);
       
       if (metadata && metadata.source_code) {
         setCurrentPageId(metadata.source_page_id);
 
-        // 4. Fetch Relationships from API
-        const rels = await get(`/api/relationships?source_code=${metadata.source_code}&source_page_id=${metadata.source_page_id}`);
-        setPageRelationships(rels || []);
+        // 2. Fetch Raw (Flat) Relationships
+        const rawRels = await get(`/api/relationships?source_code=${metadata.source_code}&source_page_id=${metadata.source_page_id}`);
+        
+        if (!rawRels) {
+            setPageRelationships([]);
+            return;
+        }
 
-        // 5. Transform Relationships into Highlight Units
-        const relationshipUnits = (rels || []).flatMap((r: any) => {
+        // 3. TRANSFORM: Map Flat API Data -> Nested "Unit" Objects
+        // This ensures the UI can read `rel.subject_unit.text_content` 
+        // and the Highlighter receives standard unit structures.
+        const processedRels = rawRels.map((r: any) => ({
+            ...r,
+            subject_unit: {
+                id: r.subject_unit_id,
+                text_content: r.subject_text,
+                unit_type: r.subject_type,
+                source_page_id: r.subject_page_id,
+                author: r.subject_author || 'Unknown', // Map if available in API
+                // Ensure coordinates are passed if your API provides them
+                start_char_index: r.subject_start,
+                end_char_index: r.subject_end,
+                connected_anchors: r.subject_anchors
+            },
+            object_unit: {
+                id: r.object_unit_id,
+                text_content: r.object_text,
+                unit_type: r.object_type,
+                source_page_id: r.object_page_id,
+                author: r.object_author || 'Unknown',
+                start_char_index: r.object_start,
+                end_char_index: r.object_end,
+                connected_anchors: r.object_anchors
+            }
+        }));
+
+        setPageRelationships(processedRels);
+
+        // 4. Send Highlights to Page
+        const unitsToHighlight = processedRels.flatMap((r: any) => {
              const units = [];
-             // If subject is on this page, highlight it as 'link_subject' (Blue)
+             
+             // Subject Highlight (Blue)
              if (r.subject_page_id === metadata.source_page_id) {
-                 units.push({ ...r, ...r.subject_unit, unit_type: 'link_subject', id: r.subject_unit_id });
+                 units.push({ 
+                    ...r.subject_unit, // Spread the nested object we just built
+                    unit_type: 'link_subject', // Override type for coloring
+                    relationship_type: r.relationship_type 
+                 });
              }
-             // If object is on this page, highlight it as 'link_object' (Green)
+
+             // Object Highlight (Green)
              if (r.object_page_id === metadata.source_page_id) {
-                 units.push({ ...r, ...r.object_unit, unit_type: 'link_object', id: r.object_unit_id });
+                 units.push({ 
+                    ...r.object_unit, 
+                    unit_type: 'link_object',
+                    relationship_type: r.relationship_type
+                 });
              }
              return units;
         });
 
-        // 6. MERGE & UPDATE
-        // We append relationship units to the standard units. 
-        // Note: If a unit ID exists in both, the Content Script highlighter usually renders the last one, 
-        // which is what we want (Relationship colors > Standard colors).
-        const finalHighlights = [...standardUnits, ...relationshipUnits];
-
-        chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_HIGHLIGHTS', units: finalHighlights });
+        chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_HIGHLIGHTS', units: unitsToHighlight });
       }
     };
 
