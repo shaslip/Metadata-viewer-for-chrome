@@ -182,7 +182,8 @@ export const RelationshipManager = () => {
          </div>
       </div>
     );
-  
+  }
+
   const handleSubmit = async () => {
     if (!subject || !object) return;
     setIsSubmitting(true);
