@@ -23,6 +23,8 @@ export const RelationshipManager = () => {
   const [relType, setRelType] = useState('commentary');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // We use this state to render the list. 
+  // It must match the structure expected by the render loop (nested subject_unit/object_unit).
   const [pageRelationships, setPageRelationships] = useState<any[]>([]);
   const [currentPageId, setCurrentPageId] = useState<number>(0);
 
@@ -31,40 +33,38 @@ export const RelationshipManager = () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
 
-      // 1. Get Page Metadata
       const metadata = await chrome.tabs.sendMessage(tab.id, { type: 'GET_METADATA' }).catch(() => null);
       
       if (metadata && metadata.source_code) {
         setCurrentPageId(metadata.source_page_id);
 
-        // 2. Fetch Raw (Flat) Relationships
         const rawRels = await get(`/api/relationships?source_code=${metadata.source_code}&source_page_id=${metadata.source_page_id}`);
         
-        if (!rawRels) {
+        if (!rawRels || rawRels.length === 0) {
             setPageRelationships([]);
             return;
         }
 
-        // 3. TRANSFORM: Map Flat API Data -> Nested "Unit" Objects
-        // This ensures the UI can read `rel.subject_unit.text_content` 
-        // and the Highlighter receives standard unit structures.
+        // CRITICAL FIX: Map API Flat Fields -> UI Nested Objects
+        // Your API returns 'subject_text', but your UI code tries to read 'rel.subject_unit.text_content'.
+        // We reconstruct the objects here so the State and the UI match.
         const processedRels = rawRels.map((r: any) => ({
             ...r,
             subject_unit: {
                 id: r.subject_unit_id,
-                text_content: r.subject_text,
-                unit_type: r.subject_type,
+                text_content: r.subject_text || r.subject_unit?.text_content, // Fallback handles both flat/nested API
+                unit_type: r.subject_type || 'link_subject',
                 source_page_id: r.subject_page_id,
-                author: r.subject_author || 'Unknown', // Map if available in API
-                // Ensure coordinates are passed if your API provides them
+                author: r.subject_author || 'Unknown',
+                // Ensure these are passed so the "Jump" button knows where to go
                 start_char_index: r.subject_start,
                 end_char_index: r.subject_end,
                 connected_anchors: r.subject_anchors
             },
             object_unit: {
                 id: r.object_unit_id,
-                text_content: r.object_text,
-                unit_type: r.object_type,
+                text_content: r.object_text || r.object_unit?.text_content,
+                unit_type: r.object_type || 'link_object',
                 source_page_id: r.object_page_id,
                 author: r.object_author || 'Unknown',
                 start_char_index: r.object_start,
@@ -75,21 +75,19 @@ export const RelationshipManager = () => {
 
         setPageRelationships(processedRels);
 
-        // 4. Send Highlights to Page
+        // Generate Highlights (using the same mapped data)
         const unitsToHighlight = processedRels.flatMap((r: any) => {
              const units = [];
              
-             // Subject Highlight (Blue)
-             if (r.subject_page_id === metadata.source_page_id) {
+             if (r.subject_unit.source_page_id === metadata.source_page_id) {
                  units.push({ 
-                    ...r.subject_unit, // Spread the nested object we just built
-                    unit_type: 'link_subject', // Override type for coloring
+                    ...r.subject_unit,
+                    unit_type: 'link_subject',
                     relationship_type: r.relationship_type 
                  });
              }
 
-             // Object Highlight (Green)
-             if (r.object_page_id === metadata.source_page_id) {
+             if (r.object_unit.source_page_id === metadata.source_page_id) {
                  units.push({ 
                     ...r.object_unit, 
                     unit_type: 'link_object',
@@ -104,9 +102,9 @@ export const RelationshipManager = () => {
     };
 
     fetchAndHighlight();
-  }, [selectedUnit]); // Re-fetch if selectedUnit changes (e.g. after delete)
+  }, [selectedUnit]); 
 
-  // Load state from storage on mount
+  // --- STANDARD HELPERS (State Persistence, etc.) ---
   useEffect(() => {
     chrome.storage.local.get(['linkerState'], (result) => {
       if (result.linkerState) {
@@ -119,7 +117,6 @@ export const RelationshipManager = () => {
     });
   }, []);
 
-  // Helper to update state AND storage
   const updateState = (
     key: 'subject' | 'object' | 'relType' | 'subjectAuthor' | 'objectAuthor' | 'clear', 
     value: any
@@ -139,13 +136,10 @@ export const RelationshipManager = () => {
     if (key === 'object') setObject(value);
     if (key === 'relType') setRelType(value);
     
-    // Auto-set Author if detecting new selection
     let newSubjectAuthor = subjectAuthor;
     let newObjectAuthor = objectAuthor;
 
-    // Force boolean type
     const isSubjectAuto = !!(value?.type === 'new' && value.context?.author && value.context.author !== 'Undefined');
-    
     if (key === 'subject' && isSubjectAuto) {
         setSubjectAuthor(value.context.author);
         newSubjectAuthor = value.context.author;
@@ -155,7 +149,6 @@ export const RelationshipManager = () => {
     }
 
     const isObjectAuto = !!(value?.type === 'new' && value.context?.author && value.context.author !== 'Undefined');
-
     if (key === 'object' && isObjectAuto) {
         setObjectAuthor(value.context.author);
         newObjectAuthor = value.context.author;
@@ -166,7 +159,6 @@ export const RelationshipManager = () => {
 
     if (key === 'relType') setRelType(value);
 
-    // Persistence Calculation
     const newState = {
       subject: key === 'subject' ? value : subject,
       object: key === 'object' ? value : object,
@@ -206,7 +198,6 @@ export const RelationshipManager = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Resolve Subject ID
       let subjectId = subject.type === 'existing' ? subject.unit.id : null;
       if (!subjectId && subject.type === 'new') {
         const res = await post('/api/contribute/unit', {
@@ -223,7 +214,6 @@ export const RelationshipManager = () => {
         subjectId = res.unit_id;
       }
 
-      // 2. Resolve Object ID
       let objectId = object.type === 'existing' ? object.unit.id : null;
       if (!objectId && object.type === 'new') {
         const res = await post('/api/contribute/unit', {
@@ -242,7 +232,6 @@ export const RelationshipManager = () => {
 
       if (!subjectId || !objectId) throw new Error("Failed to resolve Unit IDs");
 
-      // 3. Create Relationship
       await post('/api/contribute/relationship', {
         subject_unit_id: subjectId,
         object_unit_id: objectId,
@@ -260,7 +249,6 @@ export const RelationshipManager = () => {
     }
   };
 
-  // Navigation Helper
   const handleJumpToUnit = (unit: any) => {
     if (!unit) return;
     chrome.runtime.sendMessage({ 
@@ -273,7 +261,6 @@ export const RelationshipManager = () => {
     });
   };
 
-  // --- Helper Component for Author Dropdown ---
   const AuthorSelect = ({ 
     value, 
     onChange, 
@@ -296,12 +283,10 @@ export const RelationshipManager = () => {
     </div>
   );
 
-  // --- Helper to check if author is detected ---
   const isSubjectAuto = !!(subject?.type === 'new' && subject.context?.author && subject.context.author !== 'Undefined');
   const isObjectAuto = !!(object?.type === 'new' && object.context?.author && object.context.author !== 'Undefined');
 
-
-  // --- VIEW MODE RENDER ---
+  // --- VIEW MODE ---
   if (selectedUnit && (selectedUnit.unit_type === 'link_subject' || selectedUnit.unit_type === 'link_object')) {
     return (
       <div className="p-4 space-y-4">
@@ -332,7 +317,7 @@ export const RelationshipManager = () => {
     );
   }
 
-  // --- CREATE MODE RENDER ---
+  // --- CREATE MODE ---
   if (subject || object || currentSelection) {
     return (
         <div className="p-4 space-y-6">
@@ -340,7 +325,6 @@ export const RelationshipManager = () => {
             <h2 className="text-lg font-bold text-slate-800">Knowledge Linker</h2>
             <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
 
-            {/* Tooltip */}
             <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
             <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
             <p>This tab could be used to link a specific Hidden Word to the commentary or explanations about it. These connections inform bahai.chat as it's answering questions on that particular topic.</p>
@@ -348,7 +332,7 @@ export const RelationshipManager = () => {
             </div>
         </div>
         
-        {/* SUBJECT CARD */}
+        {/* SUBJECT */}
         <div className={`p-3 rounded border ${subject ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200 border-dashed'}`}>
             <div className="flex justify-between items-center mb-2">
             <span className="text-xs font-bold text-slate-500">SUBJECT (Origin)</span>
@@ -383,7 +367,7 @@ export const RelationshipManager = () => {
             )}
         </div>
 
-        {/* RELATIONSHIP TYPE */}
+        {/* REL TYPE */}
         <div className="flex items-center gap-2">
             <div className="h-px bg-slate-200 flex-1"></div>
             <select 
@@ -399,7 +383,7 @@ export const RelationshipManager = () => {
             <div className="h-px bg-slate-200 flex-1"></div>
         </div>
 
-        {/* OBJECT CARD */}
+        {/* OBJECT */}
         <div className={`p-3 rounded border ${object ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200 border-dashed'}`}>
             <div className="flex justify-between items-center mb-2">
             <span className="text-xs font-bold text-slate-500">OBJECT (Target)</span>
@@ -434,7 +418,7 @@ export const RelationshipManager = () => {
             )}
         </div>
 
-        {/* ACTION BUTTONS */}
+        {/* ACTIONS */}
         <div className="flex gap-2">
             <button 
             onClick={() => updateState('clear', null)}
@@ -456,7 +440,7 @@ export const RelationshipManager = () => {
     );
   }
 
-  // --- IDLE / LIST MODE ---
+  // --- LIST MODE ---
   return (
     <div className="p-4 space-y-6 h-full flex flex-col">
         <div className="flex justify-between items-center">
@@ -481,8 +465,8 @@ export const RelationshipManager = () => {
                 
                 <div className="space-y-4 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 flex-1 min-h-0">
                     {pageRelationships.map(rel => {
-                        const isSubjectHere = rel.subject_page_id === currentPageId;
-                        const isObjectHere = rel.object_page_id === currentPageId;
+                        const isSubjectHere = rel.subject_unit.source_page_id === currentPageId;
+                        const isObjectHere = rel.object_unit.source_page_id === currentPageId;
 
                         return (
                             <div key={rel.id} className="flex flex-col gap-1">
@@ -503,7 +487,7 @@ export const RelationshipManager = () => {
                                     </span>
                                 </button>
 
-                                {/* Connector Icon */}
+                                {/* Connector */}
                                 <div className="flex items-center justify-center -my-2 z-10">
                                     <div className="bg-white border border-slate-200 rounded-full p-1 shadow-sm">
                                         <ArrowsRightLeftIcon className="w-3 h-3 text-slate-400" />
