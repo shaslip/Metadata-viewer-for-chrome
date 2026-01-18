@@ -230,8 +230,8 @@ export const RelationshipManager = () => {
   );
 
   // --- Helper to check if author is detected ---
-  const isSubjectAuto = subject?.type === 'new' && subject.context?.author && subject.context.author !== 'Undefined';
-  const isObjectAuto = object?.type === 'new' && object.context?.author && object.context.author !== 'Undefined';
+  const isSubjectAuto = !!(subject?.type === 'new' && subject.context?.author && subject.context.author !== 'Undefined');
+  const isObjectAuto = !!(object?.type === 'new' && object.context?.author && object.context.author !== 'Undefined');
 
 
   // --- VIEW MODE RENDER ---
