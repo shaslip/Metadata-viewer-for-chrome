@@ -27,13 +27,11 @@ export const RelationshipManager = () => {
   // Load existing relationships when this tab opens
   useEffect(() => {
     const fetchAndHighlight = async () => {
-      // 1. Get current page context (You might need a helper for this if you don't have one)
-      // Assuming you can get the current active tab's URL/Context
+      // 1. Get current page context
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab.id) return;
 
       // We need source_code/page_id. 
-      // Option A: Ask content script for it
       const metadata = await chrome.tabs.sendMessage(tab.id, { type: 'GET_METADATA' });
       
       if (metadata && metadata.source_code) {
@@ -41,9 +39,7 @@ export const RelationshipManager = () => {
         const rels = await get(`/api/relationships?source_code=${metadata.source_code}&source_page_id=${metadata.source_page_id}`);
         
         // 3. Send to Content Script to Highlight
-        // We map the relationships back to a structure the highlighter understands
         const unitsToHighlight = rels.flatMap((r: any) => {
-             // Create highlightable units for both subject and object if they are on this page
              const units = [];
              if (r.subject_page_id === metadata.source_page_id) {
                  units.push({ ...r, ...r.subject_unit, unit_type: 'link_subject', id: r.subject_unit_id });
@@ -94,7 +90,7 @@ export const RelationshipManager = () => {
     if (key === 'object') setObject(value);
     if (key === 'relType') setRelType(value);
     
-    // [FIX] Auto-set Author if detecting new selection
+    // Auto-set Author if detecting new selection
     let newSubjectAuthor = subjectAuthor;
     let newObjectAuthor = objectAuthor;
 
@@ -150,39 +146,6 @@ export const RelationshipManager = () => {
       setIsSubmitting(false);
     }
   };
-
-  // [FIX] Helper to check if author is detected
-  const isSubjectAuto = subject?.type === 'new' && subject.context?.author && subject.context.author !== 'Undefined';
-  const isObjectAuto = object?.type === 'new' && object.context?.author && object.context.author !== 'Undefined';
-
-  return (
-      <div className="p-4 space-y-4">
-         <h2 className="text-lg font-bold text-slate-800">Manage Link</h2>
-         <div className="p-4 bg-slate-100 rounded border border-slate-300">
-            <span className="text-xs font-bold text-slate-500 uppercase block mb-2">
-              Selected {selectedUnit.unit_type === 'link_subject' ? 'Subject' : 'Object'}
-            </span>
-            <p className="text-sm italic text-slate-700 mb-4">"{selectedUnit.text_content}"</p>
-            
-            <div className="flex gap-2">
-              <button 
-                onClick={clearSelection}
-                className="flex-1 py-2 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50"
-              >
-                Back
-              </button>
-              <button 
-                onClick={handleDelete}
-                disabled={isSubmitting}
-                className="flex-1 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 disabled:opacity-50"
-              >
-                {isSubmitting ? "Deleting..." : "Delete Link"}
-              </button>
-            </div>
-         </div>
-      </div>
-    );
-  }
 
   const handleSubmit = async () => {
     if (!subject || !object) return;
@@ -266,6 +229,43 @@ export const RelationshipManager = () => {
     </div>
   );
 
+  // --- Helper to check if author is detected ---
+  const isSubjectAuto = subject?.type === 'new' && subject.context?.author && subject.context.author !== 'Undefined';
+  const isObjectAuto = object?.type === 'new' && object.context?.author && object.context.author !== 'Undefined';
+
+
+  // --- VIEW MODE RENDER ---
+  if (selectedUnit && (selectedUnit.unit_type === 'link_subject' || selectedUnit.unit_type === 'link_object')) {
+    return (
+      <div className="p-4 space-y-4">
+         <h2 className="text-lg font-bold text-slate-800">Manage Link</h2>
+         <div className="p-4 bg-slate-100 rounded border border-slate-300">
+            <span className="text-xs font-bold text-slate-500 uppercase block mb-2">
+              Selected {selectedUnit.unit_type === 'link_subject' ? 'Subject' : 'Object'}
+            </span>
+            <p className="text-sm italic text-slate-700 mb-4">"{selectedUnit.text_content}"</p>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={clearSelection}
+                className="flex-1 py-2 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50"
+              >
+                Back
+              </button>
+              <button 
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="flex-1 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                {isSubmitting ? "Deleting..." : "Delete Link"}
+              </button>
+            </div>
+         </div>
+      </div>
+    );
+  }
+
+  // --- CREATE MODE RENDER ---
   return (
     <div className="p-4 space-y-6">
       <div className="flex items-center gap-2 group relative">
@@ -276,7 +276,6 @@ export const RelationshipManager = () => {
         <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
           <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
           <p>This tab could be used to link a specific Hidden Word to the commentary or explanations about it. These connections inform bahai.chat as it's answering questions on that particular topic.</p>
-          {/* Tooltip Arrow */}
           <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800"></div>
         </div>
       </div>
@@ -293,11 +292,10 @@ export const RelationshipManager = () => {
             <p className="text-sm line-clamp-3 italic mb-2">
               "{subject.type === 'existing' ? subject.unit.text_content : subject.text}"
             </p>
-            {/* Show Dropdown ONLY if creating new. If existing, show Read-Only author */}
             {subject.type === 'new' ? (
                <AuthorSelect 
                  value={subjectAuthor} 
-                 onChange={(val) => updateState('subjectAuthor', val)}
+                 onChange={(val) => updateState('subjectAuthor', val)} 
                  disabled={isSubjectAuto}
                />
             ) : (
@@ -348,7 +346,7 @@ export const RelationshipManager = () => {
             {object.type === 'new' ? (
                <AuthorSelect 
                  value={objectAuthor} 
-                 onChange={(val) => updateState('objectAuthor', val)}
+                 onChange={(val) => updateState('objectAuthor', val)} 
                  disabled={isObjectAuto}
                />
             ) : (
