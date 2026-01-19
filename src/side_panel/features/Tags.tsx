@@ -8,7 +8,7 @@ import {
     MagnifyingGlassIcon, UserIcon, BuildingLibraryIcon, 
     TrashIcon, PencilSquareIcon, CheckIcon, XMarkIcon,
     ChevronDownIcon, ExclamationTriangleIcon, ArrowPathIcon,
-    FolderIcon
+    FolderIcon, ListBulletIcon
 } from '@heroicons/react/24/solid';
 import { LogicalUnit, DefinedTag } from '@/utils/types';
 
@@ -22,9 +22,10 @@ const CANONICAL_AUTHORS = [
 ];
 
 export const Tags = () => {
-  const { currentSelection, clearSelection, viewMode, setViewMode } = useSelection();
+  const { currentSelection, clearSelection } = useSelection();
   const { post, put, del, get } = useApi();
   
+  const [viewMode, setViewMode] = useState<'tree' | 'flat'>('tree');
   // Header State
   const [filterText, setFilterText] = useState('');
   
@@ -484,23 +485,26 @@ export const Tags = () => {
       {/* Header */}
       <div className="p-3 bg-white border-b border-slate-200 shadow-sm z-10 space-y-3">
         <div className="flex bg-slate-100 p-1 rounded-lg">
+          {/* [CHANGED] Button 1: Taxonomy Tree */}
           <button
-            onClick={() => setViewMode('mine')}
+            onClick={() => setViewMode('tree')}
             className={`flex-1 flex items-center justify-center py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              viewMode === 'mine' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              viewMode === 'tree' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            <UserIcon className="w-3 h-3 mr-1" />
-            My Tags
+            <FolderIcon className="w-3 h-3 mr-1" />
+            Taxonomy Tree
           </button>
+          
+          {/* [CHANGED] Button 2: Flat List */}
           <button
-            onClick={() => setViewMode('all')}
+            onClick={() => setViewMode('flat')}
             className={`flex-1 flex items-center justify-center py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              viewMode === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              viewMode === 'flat' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            <BuildingLibraryIcon className="w-3 h-3 mr-1" />
-            View Example
+            <ListBulletIcon className="w-3 h-3 mr-1" />
+            Flat list
           </button>
         </div>
         
@@ -509,14 +513,15 @@ export const Tags = () => {
                 <MagnifyingGlassIcon className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
                 <input 
                     type="text" 
-                    placeholder="Filter or create taxonomy..." 
+                    placeholder={viewMode === 'tree' ? "Filter or create taxonomy..." : "Filter tags..."}
                     className="w-full pl-8 pr-2 py-2 text-sm border rounded bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
                 />
             </div>
 
-            {viewMode === 'mine' && (
+            {/* [CHANGED] Only show Edit controls in Tree mode */}
+            {viewMode === 'tree' && (
                 !isEditMode ? (
                     <button 
                         onClick={() => setIsEditMode(true)} 
