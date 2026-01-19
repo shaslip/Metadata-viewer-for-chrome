@@ -23,7 +23,7 @@ interface TreeNode extends DefinedTag {
 
 interface Props {
     filter: string;
-    viewMode: 'mine' | 'all';
+    viewMode: 'tree' | 'flat';
     revealUnitId: number | null;
     refreshKey: number;
     onTagSelect: (tag: DefinedTag) => void;
@@ -56,14 +56,17 @@ export const TaxonomyExplorer: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<number>>(new Set());
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
-
-  // Track the "Active" folder
   const [activeFocusId, setActiveFocusId] = useState<number | null>(null);
 
   // 1. Initial Load
   useEffect(() => {
     setLoading(true);
-    get(`/api/tags/tree?scope=${viewMode}`)
+    
+    const url = viewMode === 'flat' 
+        ? `/api/tags/tree?format=flat`
+        : `/api/tags/tree`;
+
+    get(url)
       .then((data) => {
           setTree(data);
           setLocalTree(data);
