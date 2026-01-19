@@ -215,7 +215,6 @@ export const Tags = () => {
       });
       triggerRefresh();
       clearSelection();
-      alert("Highlight saved!");
     } catch (e) {
       console.error(e);
       alert("Failed to save.");
@@ -281,12 +280,20 @@ export const Tags = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!editingUnit || !confirm("Delete this highlight?")) return;
+  const handleDelete = () => {
+    if (editingUnit) {
+        setIsDeleteMode(true);
+    }
+  };
+
+  // Actual execution for Highlight Deletion
+  const confirmHighlightDelete = async () => {
+    if (!editingUnit) return;
     try {
         await del(`/api/units/${editingUnit.id}`);
         triggerRefresh();
         setEditingUnit(null);
+        setIsDeleteMode(false);
     } catch (e) {
         alert("Could not delete.");
     }
@@ -373,13 +380,14 @@ export const Tags = () => {
     }
   };
 
-  // [UPDATED] Delete Logic
-  const handleConfirmDelete = async (moveUnitsToUncategorized: boolean) => {
+  // [UPDATED] Delete Logic const handleConfirmDelete = async (moveUnitsToUncategorized: boolean) => {
+  const handleConfirmTagDelete = async () => {
     if (!editingTag) return;
 
     setIsSaving(true);
     try {
-        await del(`/api/tags/${editingTag.id}`, { move_units_to_uncategorized: moveUnitsToUncategorized });
+        // Always pass true to preserve highlights
+        await del(`/api/tags/${editingTag.id}`, { move_units_to_uncategorized: true });
         setRefreshKey(prev => prev + 1);
         setEditingTag(null);
         setIsDeleteMode(false);
@@ -423,7 +431,6 @@ export const Tags = () => {
         setEditingUnit(null);
         setRepairSelection(null);
         setForceRepairMode(false);
-        alert("Highlight repaired and saved.");
     } catch (e) {
         console.error(e);
         alert("Failed to update highlight.");
@@ -611,82 +618,91 @@ export const Tags = () => {
            <div className="p-4 overflow-y-auto">
               
               {/* 1. DELETE MODE UI */}
-              {isDeleteMode && editingTag ? (
+              {isDeleteMode ? (
                  <div className="space-y-4">
-                    {/* A: Block if children exist */}
-                    {(editingTag as any).children && (editingTag as any).children.length > 0 ? (
-                        <div className="text-center p-4">
-                            <p className="text-sm text-slate-600 mb-4">
-                                You cannot delete <strong>"{editingTag.label}"</strong> because it contains child categories.
-                            </p>
-                            <p className="text-xs text-slate-400 mb-4">
-                                Please delete or move the sub-categories first.
-                            </p>
-                            <button 
-                                onClick={() => setIsDeleteMode(false)}
-                                className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 text-sm font-semibold"
-                            >
-                                Go Back
-                            </button>
-                        </div>
-                    ) : (
-                        /* B: Logic based on Highlight Count */
-                        <div className="space-y-4">
-                             {tagHasUnits === null ? (
-                                 <div className="text-center p-6 text-slate-400 text-sm">
-                                     Checking category contents...
-                                 </div>
-                             ) : tagHasUnits === true ? (
-                                 /* Case B1: Tag HAS snippets -> Offer Choice */
-                                 <>
-                                     <p className="text-sm text-slate-700">
-                                        You are about to delete <strong>"{editingTag.label}"</strong>. 
-                                        This category contains highlighted snippets.
-                                     </p>
-                                     
-                                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                        What should happen to these highlights?
-                                     </p>
-
-                                     <div className="flex flex-col gap-2">
-                                        <button 
-                                            onClick={() => handleConfirmDelete(true)} 
-                                            className="flex items-center justify-center gap-2 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded hover:bg-blue-100 transition-colors text-sm font-semibold"
-                                        >
-                                            <FolderIcon className="w-4 h-4" />
-                                            Keep highlights (Move to 'Uncategorized')
-                                        </button>
-                                        
-                                        <button 
-                                            onClick={() => handleConfirmDelete(false)} 
-                                            className="flex items-center justify-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 rounded hover:bg-red-100 transition-colors text-sm font-semibold"
+                    {/* CASE A: Deleting a TAG */}
+                    {editingTag ? (
+                        (editingTag as any).children && (editingTag as any).children.length > 0 ? (
+                            <div className="text-center p-4">
+                                <p className="text-sm text-slate-600 mb-4">
+                                    You cannot delete <strong>"{editingTag.label}"</strong> because it contains child categories.
+                                </p>
+                                <p className="text-xs text-slate-400 mb-4">
+                                    Please delete or move the sub-categories first.
+                                </p>
+                                <button 
+                                    onClick={() => setIsDeleteMode(false)}
+                                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 text-sm font-semibold"
+                                >
+                                    Go Back
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                 {tagHasUnits === null ? (
+                                     <div className="text-center p-6 text-slate-400 text-sm">Checking...</div>
+                                 ) : tagHasUnits === true ? (
+                                     /* Case A1: Tag HAS snippets */
+                                     <>
+                                         <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
+                                            <p className="font-bold mb-1">Warning</p>
+                                            <p>This category contains highlights. If you delete it, these highlights will be moved to <strong>"Uncategorized"</strong>.</p>
+                                         </div>
+                                         
+                                         <button 
+                                            onClick={handleConfirmTagDelete} 
+                                            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold"
                                         >
                                             <TrashIcon className="w-4 h-4" />
-                                            Delete highlights permanently
+                                            Delete "{editingTag.label}"
                                         </button>
-                                     </div>
-                                 </>
-                             ) : (
-                                 /* Case B2: Tag EMPTY -> Simple Confirm */
-                                 <>
-                                     <p className="text-sm text-slate-700 mb-2">
-                                        Are you sure you want to delete <strong>"{editingTag.label}"</strong>?
-                                     </p>
-                                     <p className="text-xs text-slate-400 mb-4">
-                                        This category is empty.
-                                     </p>
-                                     
-                                     <button 
-                                        onClick={() => handleConfirmDelete(true)} // Param doesn't matter for empty tags
-                                        className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold"
-                                     >
-                                        <TrashIcon className="w-4 h-4" />
-                                        Yes, Delete
-                                     </button>
-                                 </>
-                             )}
+                                     </>
+                                 ) : (
+                                     /* Case A2: Tag EMPTY */
+                                     <>
+                                         <p className="text-sm text-slate-700 mb-2">
+                                            Are you sure you want to delete <strong>"{editingTag.label}"</strong>?
+                                         </p>
+                                         <button 
+                                            onClick={handleConfirmTagDelete}
+                                            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold"
+                                         >
+                                            <TrashIcon className="w-4 h-4" />
+                                            Yes, Delete
+                                         </button>
+                                     </>
+                                 )}
+    
+                                 <div className="pt-2 text-center">
+                                    <button 
+                                        onClick={() => setIsDeleteMode(false)}
+                                        className="text-xs text-slate-400 hover:text-slate-600 underline"
+                                    >
+                                        Cancel
+                                    </button>
+                                 </div>
+                            </div>
+                        )
+                    ) : (
+                        /* CASE B: Deleting a HIGHLIGHT (Unit) */
+                        <div className="space-y-4">
+                            <p className="text-sm text-slate-700 mb-2">
+                                Are you sure you want to delete this highlight?
+                            </p>
+                            
+                            <div className="p-2 bg-slate-50 border border-slate-200 rounded text-xs italic text-slate-500 line-clamp-3">
+                                "{editingUnit?.text_content}"
+                            </div>
 
-                             <div className="pt-2 text-center">
+                            <button 
+                                onClick={confirmHighlightDelete}
+                                className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold"
+                            >
+                                <TrashIcon className="w-4 h-4" />
+                                Yes, Delete Highlight
+                            </button>
+
+                            <div className="pt-2 text-center">
                                 <button 
                                     onClick={() => setIsDeleteMode(false)}
                                     className="text-xs text-slate-400 hover:text-slate-600 underline"
