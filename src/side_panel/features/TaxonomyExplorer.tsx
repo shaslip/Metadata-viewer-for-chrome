@@ -398,9 +398,9 @@ const TaxonomyNode = ({
                                             
                                             /* [CHANGED] Active uses Teal, Inactive uses Slate */
                                             ${isUnitSelected 
-                                                ? 'bg-yellow-50 text-yellow-900 font-semibold border-yellow-400' 
-                                                : `border-transparent hover:border-blue-300 hover:bg-white hover:text-blue-700 
-                                                   ${isActive ? 'text-teal-600' : 'text-slate-500'}`
+                                                ? 'bg-yellow-50 text-yellow-900 font-semibold border-yellow-400'
+                                                : `border-transparent hover:border-blue-300 hover:bg-white hover:text-blue-700
+                                                   ${isActive ? 'text-indigo-600' : 'text-slate-500'}`
                                             }
                                         `}
                                         onClick={(e) => { e.stopPropagation(); onUnitClick(u, true); }}
