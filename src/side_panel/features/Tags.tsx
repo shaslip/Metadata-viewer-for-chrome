@@ -484,7 +484,7 @@ export const Tags = () => {
                 <MagnifyingGlassIcon className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
                 <input 
                     type="text" 
-                    placeholder="Filter taxonomy..." 
+                    placeholder="Filter or create taxonomy..." 
                     className="w-full pl-8 pr-2 py-2 text-sm border rounded bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none"
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
