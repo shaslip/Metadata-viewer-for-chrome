@@ -57,6 +57,8 @@ export const Tags = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [revealUnitId, setRevealUnitId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const isEditModeRef = useRef(isEditMode);
+  const handleSaveTreeRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   // State for Parent Selection in Modify Mode
   const [parentSearchQuery, setParentSearchQuery] = useState('');
@@ -80,8 +82,12 @@ export const Tags = () => {
   const handleUnitClickRef = useRef<(unit: LogicalUnit, fromTree?: boolean) => void>(() => {});
 
   // Sync Refs with State
-  useEffect(() => { editingUnitRef.current = editingUnit; }, [editingUnit]);
-  useEffect(() => { forceRepairModeRef.current = forceRepairMode; }, [forceRepairMode]);
+  useEffect(() => { 
+      editingUnitRef.current = editingUnit; 
+      forceRepairModeRef.current = forceRepairMode;
+      isEditModeRef.current = isEditMode;
+      handleSaveTreeRef.current = handleSaveTree;
+  });
 
   // 1. Listen for clicks/selection
   useEffect(() => {
@@ -96,6 +102,11 @@ export const Tags = () => {
       if (msg.type === 'TEXT_SELECTED') {
           // Check Refs instead of state variables
           const isRepairing = editingUnitRef.current?.broken_index || forceRepairModeRef.current;
+
+          // If user selects text while in Edit Tree mode, auto-save and close tree editor
+          if (!isRepairing && isEditModeRef.current) {
+              handleSaveTreeRef.current();
+          }
 
           if (isRepairing) {
              setRepairSelection({
@@ -363,6 +374,11 @@ export const Tags = () => {
   };
 
   const handleSaveTree = async () => {
+    // If a tag is currently being modified, save it first
+    if (editingTag) {
+        await handleModifyTag();
+    }
+
     if (treeChanges.length === 0) {
         setIsEditMode(false);
         return;
