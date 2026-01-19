@@ -318,7 +318,7 @@ const TaxonomyNode = ({
 
     const renderIcon = () => {
         if (isExpanded) {
-            return <FolderOpenIcon className={`w-5 h-5 ${isActive ? 'text-blue-400' : 'text-blue-400'}`} />;
+            return <FolderOpenIcon className={`w-5 h-5 ${isActive ? 'text-blue-500' : 'text-blue-400'}`} />;
         }
         if (node.children && node.children.length > 0) {
             return <DoubleFolderIcon className="w-5 h-5" />;
@@ -337,7 +337,7 @@ const TaxonomyNode = ({
                     ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm' : ''}
                     
                     ${!isDragging && !isActive ? 'hover:bg-slate-100 text-slate-700 hover:text-blue-400' : ''}
-                    ${isActive && !isDragging ? 'text-blue-400 font-medium' : ''}
+                    ${isActive && !isDragging ? 'text-blue-500 font-medium' : ''}
                 `}
                 onClick={handleNodeClick}
                 title={isEditMode ? "Edit Tag" : "Toggle Folder"}
