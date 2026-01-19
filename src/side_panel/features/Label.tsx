@@ -33,7 +33,7 @@ export const Label = () => {
   useEffect(() => {
     let isMounted = true;
     
-    // Clear OLD data immediately on navigation trigger
+    // Clear OLD data immediately on navigation
     if (!currentSelection && !selectedUnit) {
         setPageUnits([]);
     }
@@ -43,25 +43,29 @@ export const Label = () => {
         if (currentSelection || selectedUnit) return;
 
         try {
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (tabs[0]?.id) {
-                const res = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_CACHED_STATS' }).catch(() => null);
-                
-                if (res && res.units) {
-                    if (isMounted) {
-                        setPageUnits(res.units.filter((u: any) => 
-                            !['user_highlight', 'canonical_answer', 'link_subject', 'link_object'].includes(u.unit_type)
-                        ));
-                    }
-                    return; // Success, exit
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab?.id) return;
+
+            const res = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CACHED_STATS' }).catch(() => null);
+            
+            // CRITICAL CHANGE: We must verify 'source_code' exists to confirm the scraper 
+            // has finished processing the new page.
+            const hasContext = res && (res.source_code || (res.units && res.units.length > 0));
+
+            if (hasContext) {
+                if (isMounted) {
+                    setPageUnits(res.units.filter((u: any) => 
+                        !['user_highlight', 'canonical_answer', 'link_subject', 'link_object'].includes(u.unit_type)
+                    ));
                 }
+                return; // Success
             }
 
-            // Retry Logic: 250ms delay, max 8 tries (2 seconds)
+            // Retry Logic: 250ms delay, max 8 tries
             if (retryCount < 8 && isMounted) {
                 setTimeout(() => fetchStats(retryCount + 1), 250);
             } else if (isMounted) {
-                setPageUnits([]); // Ensure empty if finally failed
+                setPageUnits([]); // Give up
             }
         } catch (e) { 
             if (isMounted) setPageUnits([]);
@@ -71,7 +75,7 @@ export const Label = () => {
     fetchStats();
 
     return () => { isMounted = false; };
-  }, [currentSelection, selectedUnit, refreshTrigger]); // Add refreshTrigger
+  }, [refreshTrigger]);
 
   const handleUnitJump = (unit: typeof pageUnits[0]) => {
       chrome.runtime.sendMessage({ 
