@@ -14,6 +14,7 @@ interface SelectionContextType {
   clearSelection: () => void;
   viewMode: 'mine' | 'all';
   setViewMode: (mode: 'mine' | 'all') => void;
+  refreshTrigger: number;
 }
 
 const SelectionContext = createContext<SelectionContextType | undefined>(undefined);
@@ -22,6 +23,31 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
   const [currentSelection, setCurrentSelection] = useState<SelectionState | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<(LogicalUnit & { can_delete?: boolean }) | null>(null);
   const [viewMode, setViewModeState] = useState<'mine' | 'all'>('mine');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Navigation Listener
+  useEffect(() => {
+    const handleTabUpdated = (tabId: number, changeInfo: any, tab: chrome.tabs.Tab) => {
+      // Only refresh when page load completes and it is the active tab
+      if (changeInfo.status === 'complete' && tab.active) {
+        setRefreshTrigger(prev => prev + 1);
+        clearSelection(); 
+      }
+    };
+
+    const handleTabActivated = () => {
+      setRefreshTrigger(prev => prev + 1);
+      clearSelection();
+    };
+
+    chrome.tabs.onUpdated.addListener(handleTabUpdated);
+    chrome.tabs.onActivated.addListener(handleTabActivated);
+
+    return () => {
+      chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+      chrome.tabs.onActivated.removeListener(handleTabActivated);
+    };
+  }, []);
 
   useEffect(() => {
     const handleMessage = (request: any) => {
@@ -70,7 +96,14 @@ export const SelectionProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <SelectionContext.Provider value={{ currentSelection, selectedUnit, clearSelection, viewMode, setViewMode }}>
+    <SelectionContext.Provider value={{ 
+        currentSelection, 
+        selectedUnit, 
+        clearSelection, 
+        viewMode, 
+        setViewMode,
+        refreshTrigger
+    }}>
       {children}
     </SelectionContext.Provider>
   );
