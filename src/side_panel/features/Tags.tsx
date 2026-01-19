@@ -31,7 +31,6 @@ export const Tags = () => {
   // Edit Tree Mode
   const [isEditMode, setIsEditMode] = useState(false);
   const [treeChanges, setTreeChanges] = useState<{id: number, parent_id: number | null}[]>([]);
-  // Accumulate changes instead of overwriting
   const handleTreeChange = (newChanges: {id: number, parent_id: number | null}[]) => {
     setTreeChanges(prev => {
         const changeMap = new Map(prev.map(c => [c.id, c]));
@@ -45,6 +44,7 @@ export const Tags = () => {
   };
   const parentInputRef = useRef<HTMLInputElement>(null);
   const [parentDropdownPos, setParentDropdownPos] = useState({ bottom: 0, left: 0, width: 0 });
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
   
   // Editor State
   const [editingUnit, setEditingUnit] = useState<LogicalUnit | null>(null);
@@ -373,11 +373,21 @@ export const Tags = () => {
     }
   };
 
-  const handleTagDeleteRequest = async (tag: DefinedTag, hasChildren: boolean) => {
-    if (hasChildren) {
-        alert("You must delete or move all child tags before you can delete this one.");
-        return;
+  const handleConfirmDelete = async (moveUnitsToUncategorized: boolean) => {
+    if (!editingTag) return;
+
+    setIsSaving(true);
+    try {
+        await del(`/api/tags/${editingTag.id}`, { move_units_to_uncategorized: moveUnitsToUncategorized });
+        setRefreshKey(prev => prev + 1);
+        setEditingTag(null);
+        setIsDeleteMode(false);
+    } catch (e: any) {
+        alert(e.message || "Could not delete tag");
+    } finally {
+        setIsSaving(false);
     }
+  };
 
     const shouldDelete = confirm(`Are you sure you want to delete "${tag.label}"?`);
     if (!shouldDelete) return;
@@ -452,6 +462,7 @@ export const Tags = () => {
     setForceRepairMode(false);
     setIsAutoDetected(false);
     setShowManualAuthorInput(false);
+    setIsDeleteMode(false);
   };
 
   const isEditorVisible = !!currentSelection || !!editingUnit || !!editingTag;
@@ -463,6 +474,7 @@ export const Tags = () => {
       setEditingTag(null); // <--- FIX ADDED HERE
       setRefreshKey(prev => prev + 1);
       setTreeChanges([]);
+      setIsDeleteMode(false);
   };
 
   return (
@@ -556,27 +568,42 @@ export const Tags = () => {
       {/* Editor Pane (Dynamic Content) */}
       {isEditorVisible && (
         <div className="border-t-2 border-blue-500 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 flex flex-col max-h-[60%]">
-           
+            
            {/* Dynamic Header */}
-           <div className={`flex items-center justify-between px-4 py-2 border-b border-slate-200 ${editingUnit?.broken_index ? 'bg-red-50' : 'bg-slate-50'}`}>
-              <span className={`text-xs font-bold uppercase ${editingUnit?.broken_index ? 'text-red-600 flex items-center gap-1' : 'text-slate-500'}`}>
-                {editingUnit?.broken_index && <ExclamationTriangleIcon className="w-4 h-4" />}
-                {editingUnit?.broken_index ? "Repair Broken Highlight" : (editingTag ? "Modify Tag" : (editingUnit ? "Edit Highlight" : "New Highlight"))}
+           <div className={`flex items-center justify-between px-4 py-2 border-b border-slate-200 ${editingUnit?.broken_index || isDeleteMode ? 'bg-red-50' : 'bg-slate-50'}`}>
+              <span className={`text-xs font-bold uppercase ${editingUnit?.broken_index || isDeleteMode ? 'text-red-600 flex items-center gap-1' : 'text-slate-500'}`}>
+                {(editingUnit?.broken_index || isDeleteMode) && <ExclamationTriangleIcon className="w-4 h-4" />}
+                {isDeleteMode ? "Delete Category" : (
+                    editingUnit?.broken_index ? "Repair Broken Highlight" : (editingTag ? "Modify Tag" : (editingUnit ? "Edit Highlight" : "New Highlight"))
+                )}
               </span>
               
               <div className="flex items-center gap-1">
-                {/* Save / Update / Repair Button */}
-                <button 
-                    onClick={
-                        isRepairView ? handleRepair : 
-                        (editingTag ? handleModifyTag : (editingUnit ? handleUpdate : handleCreate))
-                    }
-                    disabled={isSaving || (isRepairView && !repairSelection)} 
-                    className={`p-1 rounded disabled:opacity-50 ${isRepairView ? 'text-green-600 hover:bg-green-50' : 'text-green-600 hover:bg-green-50'}`} 
-                    title={isRepairView ? "Confirm Repair" : "Save"}
-                >
-                    <CheckIcon className="w-5 h-5" />
-                </button>
+                {/* Save Button (Hide in Delete Mode) */}
+                {!isDeleteMode && (
+                    <button 
+                        onClick={
+                            isRepairView ? handleRepair : 
+                            (editingTag ? handleModifyTag : (editingUnit ? handleUpdate : handleCreate))
+                        }
+                        disabled={isSaving || (isRepairView && !repairSelection)} 
+                        className={`p-1 rounded disabled:opacity-50 ${isRepairView ? 'text-green-600 hover:bg-green-50' : 'text-green-600 hover:bg-green-50'}`} 
+                        title={isRepairView ? "Confirm Repair" : "Save"}
+                    >
+                        <CheckIcon className="w-5 h-5" />
+                    </button>
+                )}
+
+                {/* [NEW] Delete Trigger Button (Only show when modifying a tag) */}
+                {editingTag && !isDeleteMode && (
+                    <button 
+                        onClick={() => setIsDeleteMode(true)}
+                        className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
+                        title="Delete Tag"
+                    >
+                        <TrashIcon className="w-5 h-5" />
+                    </button>
+                )}
 
                 {/* Manual Edit / Re-Align Button */}
                 {editingUnit && !editingUnit.broken_index && !isRepairView && (
@@ -589,6 +616,7 @@ export const Tags = () => {
                     </button>
                 )}
 
+                {/* Delete Highlight Button */}
                 {editingUnit && (
                     <button onClick={handleDelete} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Delete">
                         <TrashIcon className="w-5 h-5" />
@@ -605,109 +633,160 @@ export const Tags = () => {
 
            <div className="p-4 overflow-y-auto">
               
-              {/* 1. Repair Mode UI */}
-              {isRepairView ? (
-                  <div className="space-y-4">
-                      <div className="text-xs text-slate-500">
-                          {editingUnit?.broken_index 
-                             ? "This highlight cannot be found. Select text to repair." 
-                             : "Select text on the page to update the highlighted range."}
-                      </div>
-
-                      {/* [FIX] Only show Original Text if we actually have the unit (now we should) */}
-                      {editingUnit && (
-                          <div className="opacity-75">
-                              <label className="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase">Original Text</label>
-                              <div className="text-xs text-slate-600 bg-slate-100 p-2 rounded border border-slate-200 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
-                                  "{editingUnit.text_content}"
-                              </div>
-                          </div>
-                      )}
-
-                      <div>
-                          <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">New Selection</label>
-                          {repairSelection ? (
-                              <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
-                                  "{repairSelection.text}"
-                              </div>
-                          ) : (
-                              <div className="p-2 border border-dashed border-slate-300 rounded text-sm text-slate-400 text-center py-4">
-                                  Waiting for you to select text on the page...
-                              </div>
-                          )}
-                      </div>
-                  </div>
-              ) : (
-                /* 2. Normal Edit/Create UI */
-                editingTag ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">Tag Name</label>
-                      <input 
-                        type="text" 
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={editingTag.label}
-                        onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
-                        autoFocus
-                      />
-                    </div>
-
-                    {/* [NEW] Parent Selector */}
-                    <div className="relative">
-                      <label className="block text-xs font-bold text-slate-500 mb-1">Move to Parent (Optional)</label>
-                      
-                      {selectedParent ? (
-                        <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-                          <div className="flex items-center gap-2">
-                            <FolderIcon className="w-4 h-4 opacity-50"/>
-                            {selectedParent.label}
-                          </div>
-                          <button onClick={() => { setSelectedParent(null); setParentSearchQuery(''); }}>
-                            <XMarkIcon className="w-4 h-4"/>
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <input 
-                            ref={parentInputRef}
-                            type="text" 
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="Type to find a parent category..."
-                            value={parentSearchQuery}
-                            onChange={(e) => setParentSearchQuery(e.target.value)}
-                          />
-                          {/* Suggestions Dropdown */}
-                          {parentSuggestions.length > 0 && createPortal(
-                            <ul 
-                                className="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-2xl ring-1 ring-black/10 overflow-hidden"
-                                style={{
-                                    left: parentDropdownPos.left,
-                                    bottom: parentDropdownPos.bottom,
-                                    width: parentDropdownPos.width,
-                                    maxHeight: '50vh',
-                                    overflowY: 'auto'
-                                }}
+              {/* 1. DELETE MODE UI */}
+              {isDeleteMode && editingTag ? (
+                 <div className="space-y-4">
+                    {(editingTag as any).children && (editingTag as any).children.length > 0 ? (
+                        <div className="text-center p-4">
+                            <p className="text-sm text-slate-600 mb-4">
+                                You cannot delete <strong>"{editingTag.label}"</strong> because it contains child categories.
+                            </p>
+                            <p className="text-xs text-slate-400 mb-4">
+                                Please delete or move the sub-categories first.
+                            </p>
+                            <button 
+                                onClick={() => setIsDeleteMode(false)}
+                                className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 text-sm font-semibold"
                             >
-                              {/* Header */}
-                              <li className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                                Suggested Parents
-                              </li>
+                                Go Back
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                             <p className="text-sm text-slate-700">
+                                You are about to delete <strong>"{editingTag.label}"</strong>. 
+                                This cannot be undone.
+                             </p>
+                             
+                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                What should happen to the highlights in this category?
+                             </p>
 
-                              {parentSuggestions.map(s => (
-                                <li 
-                                  key={s.id} 
-                                  className="px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2 text-slate-700 border-b border-slate-50 last:border-0"
-                                  onClick={() => {
-                                    setSelectedParent({ id: s.id, label: s.label });
-                                    setParentSuggestions([]);
-                                  }}
+                             <div className="flex flex-col gap-2">
+                                <button 
+                                    onClick={() => handleConfirmDelete(true)} // true = move to uncategorized
+                                    className="flex items-center justify-center gap-2 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded hover:bg-blue-100 transition-colors text-sm font-semibold"
                                 >
-                                  <FolderIcon className="w-4 h-4 text-blue-400 opacity-75"/>
-                                  <span className="truncate">{s.label}</span>
-                                </li>
-                              ))}
-                            </ul>,
-                            document.body
+                                    <FolderIcon className="w-4 h-4" />
+                                    Keep highlights (Move to 'Uncategorized')
+                                </button>
+                                
+                                <button 
+                                    onClick={() => handleConfirmDelete(false)} // false = delete snippets
+                                    className="flex items-center justify-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 rounded hover:bg-red-100 transition-colors text-sm font-semibold"
+                                >
+                                    <TrashIcon className="w-4 h-4" />
+                                    Delete highlights permanently
+                                </button>
+                             </div>
+
+                             <div className="pt-2 text-center">
+                                <button 
+                                    onClick={() => setIsDeleteMode(false)}
+                                    className="text-xs text-slate-400 hover:text-slate-600 underline"
+                                >
+                                    Cancel
+                                </button>
+                             </div>
+                        </div>
+                    )}
+                 </div>
+              ) : isRepairView ? (
+                 /* 2. Repair Mode UI (Existing Code) ... */
+                 <div className="space-y-4">
+                   {/* ... Keep Existing Repair Logic ... */}
+                   <div className="text-xs text-slate-500">
+                       {editingUnit?.broken_index 
+                          ? "This highlight cannot be found. Select text to repair." 
+                          : "Select text on the page to update the highlighted range."}
+                   </div>
+                   {editingUnit && (
+                       <div className="opacity-75">
+                           <label className="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase">Original Text</label>
+                           <div className="text-xs text-slate-600 bg-slate-100 p-2 rounded border border-slate-200 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
+                               "{editingUnit.text_content}"
+                           </div>
+                       </div>
+                   )}
+                   <div>
+                       <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">New Selection</label>
+                       {repairSelection ? (
+                           <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+                               "{repairSelection.text}"
+                           </div>
+                       ) : (
+                           <div className="p-2 border border-dashed border-slate-300 rounded text-sm text-slate-400 text-center py-4">
+                               Waiting for you to select text on the page...
+                           </div>
+                       )}
+                   </div>
+                 </div>
+              ) : (
+                /* 3. Normal Edit/Create UI */
+                editingTag ? (
+                   // ... Keep Existing Tag Edit Inputs ...
+                   <div className="space-y-4">
+                     <div>
+                       <label className="block text-xs font-bold text-slate-500 mb-1">Tag Name</label>
+                       <input 
+                         type="text" 
+                         className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                         value={editingTag.label}
+                         onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
+                         autoFocus
+                       />
+                     </div>
+                     <div className="relative">
+                       <label className="block text-xs font-bold text-slate-500 mb-1">Move to Parent (Optional)</label>
+                       {selectedParent ? (
+                         <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                           <div className="flex items-center gap-2">
+                             <FolderIcon className="w-4 h-4 opacity-50"/>
+                             {selectedParent.label}
+                           </div>
+                           <button onClick={() => { setSelectedParent(null); setParentSearchQuery(''); }}>
+                             <XMarkIcon className="w-4 h-4"/>
+                           </button>
+                         </div>
+                       ) : (
+                         <>
+                           <input 
+                             ref={parentInputRef}
+                             type="text" 
+                             className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                             placeholder="Type to find a parent category..."
+                             value={parentSearchQuery}
+                             onChange={(e) => setParentSearchQuery(e.target.value)}
+                           />
+                           {parentSuggestions.length > 0 && createPortal(
+                             <ul 
+                                 className="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-2xl ring-1 ring-black/10 overflow-hidden"
+                                 style={{
+                                     left: parentDropdownPos.left,
+                                     bottom: parentDropdownPos.bottom,
+                                     width: parentDropdownPos.width,
+                                     maxHeight: '50vh',
+                                     overflowY: 'auto'
+                                 }}
+                             >
+                               <li className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                 Suggested Parents
+                               </li>
+                               {parentSuggestions.map(s => (
+                                 <li 
+                                   key={s.id} 
+                                   className="px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2 text-slate-700 border-b border-slate-50 last:border-0"
+                                   onClick={() => {
+                                     setSelectedParent({ id: s.id, label: s.label });
+                                     setParentSuggestions([]);
+                                   }}
+                                 >
+                                   <FolderIcon className="w-4 h-4 text-blue-400 opacity-75"/>
+                                   <span className="truncate">{s.label}</span>
+                                 </li>
+                               ))}
+                             </ul>,
+                             document.body
                           )}
                         </>
                       )}
