@@ -558,7 +558,6 @@ export const Tags = () => {
             isSelectionMode={isEditorVisible && !editingTag}
             isEditMode={isEditMode}
             onTreeChange={handleTreeChange}
-            onDeleteTag={handleTagDeleteRequest}
             onEditTag={setEditingTag}
             onUnitClick={handleUnitClick}
             onCreateTag={handleQuickCreate}
