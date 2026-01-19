@@ -149,6 +149,23 @@ export const QAManager = () => {
     try {
       const bookTitle = await deriveBookTitle();
 
+      // 1. Fetch Clean Metadata from Scraper (Single Source of Truth)
+      // We reuse the message Label.tsx uses to get data processed by scraper.ts
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      let cleanTitle = "Unknown Title";
+
+      if (tabs[0]?.id) {
+         try {
+           const scraperData = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_CACHED_STATS' });
+           // The scraper has already handled the " - SiteName" splitting logic
+           if (scraperData?.title) {
+             cleanTitle = scraperData.title;
+           }
+         } catch (err) {
+           console.warn("Could not retrieve metadata from content script", err);
+         }
+      }
+
       if (answer.type === 'existing') {
         await del(`/api/units/${answer.unit.id}`);
       }
@@ -156,6 +173,7 @@ export const QAManager = () => {
       const unitPayload = answer.type === 'existing' ? {
           source_code: answer.unit.source_code,
           source_page_id: answer.unit.source_page_id,
+          title: cleanTitle,
           text_content: answer.unit.text_content,
           start_char_index: answer.unit.start_char_index,
           end_char_index: answer.unit.end_char_index,
