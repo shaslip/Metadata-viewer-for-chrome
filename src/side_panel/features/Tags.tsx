@@ -31,6 +31,18 @@ export const Tags = () => {
   // Edit Tree Mode
   const [isEditMode, setIsEditMode] = useState(false);
   const [treeChanges, setTreeChanges] = useState<{id: number, parent_id: number | null}[]>([]);
+  // Accumulate changes instead of overwriting
+  const handleTreeChange = (newChanges: {id: number, parent_id: number | null}[]) => {
+    setTreeChanges(prev => {
+        const changeMap = new Map(prev.map(c => [c.id, c]));
+
+        newChanges.forEach(c => {
+            changeMap.set(c.id, c);
+        });
+
+        return Array.from(changeMap.values());
+    });
+  };
   const parentInputRef = useRef<HTMLInputElement>(null);
   const [parentDropdownPos, setParentDropdownPos] = useState({ bottom: 0, left: 0, width: 0 });
   
@@ -533,7 +545,7 @@ export const Tags = () => {
             onTagSelect={handleTagClickFromTree}
             isSelectionMode={isEditorVisible && !editingTag}
             isEditMode={isEditMode}
-            onTreeChange={setTreeChanges}
+            onTreeChange={handleTreeChange}
             onDeleteTag={handleTagDeleteRequest}
             onEditTag={setEditingTag}
             onUnitClick={handleUnitClick}
