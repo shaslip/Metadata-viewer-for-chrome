@@ -6,7 +6,8 @@ import { useApi } from '@/hooks/useApi';
 import { LogicalUnit } from '@/utils/types';
 
 export const Label = () => {
-  const { currentSelection, selectedUnit, clearSelection } = useSelection();
+  // 1. Destructure refreshTrigger
+  const { currentSelection, selectedUnit, clearSelection, refreshTrigger } = useSelection();
   const { get } = useApi();
 
   const [repairTarget, setRepairTarget] = useState<LogicalUnit | null>(null);
@@ -28,28 +29,49 @@ export const Label = () => {
     }
   }, [selectedUnit]);
 
+  // 2. Refactored Fetch Logic with Retry
   useEffect(() => {
-    const fetchStats = async () => {
-        if (!currentSelection && !selectedUnit) {
-            try {
-                const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-                if (tabs[0]?.id) {
-                    const res = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_CACHED_STATS' }).catch(() => null);
-                    if (res && res.units) {
-                          setPageUnits(res.units.filter((u: any) => 
-                              !['user_highlight', 'canonical_answer', 'link_subject', 'link_object'].includes(u.unit_type)
-                          ));
-                    } else {
-                          setPageUnits([]);
+    let isMounted = true;
+    
+    // Clear OLD data immediately on navigation trigger
+    if (!currentSelection && !selectedUnit) {
+        setPageUnits([]);
+    }
+
+    const fetchStats = async (retryCount = 0) => {
+        // Don't fetch if we are in the middle of creating/editing
+        if (currentSelection || selectedUnit) return;
+
+        try {
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs[0]?.id) {
+                const res = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_CACHED_STATS' }).catch(() => null);
+                
+                if (res && res.units) {
+                    if (isMounted) {
+                        setPageUnits(res.units.filter((u: any) => 
+                            !['user_highlight', 'canonical_answer', 'link_subject', 'link_object'].includes(u.unit_type)
+                        ));
                     }
+                    return; // Success, exit
                 }
-            } catch (e) { 
-                setPageUnits([]);
             }
+
+            // Retry Logic: 250ms delay, max 8 tries (2 seconds)
+            if (retryCount < 8 && isMounted) {
+                setTimeout(() => fetchStats(retryCount + 1), 250);
+            } else if (isMounted) {
+                setPageUnits([]); // Ensure empty if finally failed
+            }
+        } catch (e) { 
+            if (isMounted) setPageUnits([]);
         }
     };
+    
     fetchStats();
-  }, [currentSelection, selectedUnit]);
+
+    return () => { isMounted = false; };
+  }, [currentSelection, selectedUnit, refreshTrigger]); // Add refreshTrigger
 
   const handleUnitJump = (unit: typeof pageUnits[0]) => {
       chrome.runtime.sendMessage({ 
