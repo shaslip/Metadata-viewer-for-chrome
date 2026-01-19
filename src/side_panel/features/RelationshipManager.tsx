@@ -14,7 +14,7 @@ const AUTHOR_OPTIONS = [
 ];
 
 export const RelationshipManager = () => {
-  const { currentSelection, selectedUnit, clearSelection } = useSelection();
+  const { currentSelection, selectedUnit, clearSelection, refreshTrigger } = useSelection();
   const { post, get, del } = useApi();
   const [subject, setSubject] = useState<StagedItem | null>(null);
   const [object, setObject] = useState<StagedItem | null>(null);
@@ -52,7 +52,7 @@ export const RelationshipManager = () => {
     };
 
     fetchStats();
-  }, [selectedUnit]);
+  }, [selectedUnit, refreshTrigger]);
 
   // --- STANDARD HELPERS (State Persistence, etc.) ---
   useEffect(() => {
