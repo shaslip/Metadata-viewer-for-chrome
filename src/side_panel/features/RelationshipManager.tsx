@@ -29,33 +29,31 @@ export const RelationshipManager = () => {
   useEffect(() => {
     let isMounted = true;
 
+    // 1. Clear IMMEDIATELY when navigation is detected
+    // This removes the "stale" data instantly while we wait for the new page to load.
+    setRelationships([]);
+
     const fetchStats = async (retryCount = 0) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
 
       try {
-        // Attempt to get context from the page
         const res = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CACHED_STATS' }).catch(() => null);
         
-        // 1. Check if we got valid context
         const pageSourceCode = res?.source_code || res?.units?.[0]?.source_code;
         const pageSourcePageId = res?.source_page_id || res?.units?.[0]?.source_page_id;
 
         if (pageSourceCode && pageSourcePageId) {
-            // Success! We have context, now fetch the relationships
             const rels = await get(`/api/relationships?source_code=${pageSourceCode}&source_page_id=${pageSourcePageId}`);
             if (isMounted) setRelationships(rels || []);
             return; 
         }
 
-        // 2. Failure Case: Content script wasn't ready or cache was empty
-        // If we haven't hit the limit (3 attempts), wait and try again.
-        if (retryCount < 3 && isMounted) {
-            // console.log(`[Linker] Content not ready, retrying (${retryCount + 1}/3)...`);
-            setTimeout(() => fetchStats(retryCount + 1), 500); 
+        // 2. Retry Logic: 250ms delay, give up after 2 seconds (8 retries)
+        if (retryCount < 8 && isMounted) {
+            setTimeout(() => fetchStats(retryCount + 1), 250); 
         } else if (isMounted) {
-            // Give up after 3 tries (1.5 seconds)
-            setRelationships([]);
+            setRelationships([]); // Ensure empty if finally failed
         }
 
       } catch (e) {
@@ -67,7 +65,7 @@ export const RelationshipManager = () => {
     fetchStats();
 
     return () => { isMounted = false; };
-  }, [selectedUnit, refreshTrigger]);
+  }, [refreshTrigger]);
 
   // --- STANDARD HELPERS (State Persistence, etc.) ---
   useEffect(() => {
