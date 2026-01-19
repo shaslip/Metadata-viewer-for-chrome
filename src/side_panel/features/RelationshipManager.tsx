@@ -424,7 +424,7 @@ export const RelationshipManager = () => {
         {relationships.length > 0 ? (
             <div className="bg-slate-50 rounded border border-slate-200 p-3 flex flex-col h-full overflow-hidden">
                 <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide border-b border-slate-200 pb-1 flex-shrink-0">
-                    This page contains: {relationships.length} link{pageUnits.length !== 1 ? 's' : ''}
+                    This page contains: {relationships.length} link{relationships.length !== 1 ? 's' : ''}
                 </p>
                 
                 <div className="space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 flex-1 min-h-0">
