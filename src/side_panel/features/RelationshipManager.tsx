@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { QuestionMarkCircleIcon, ArrowsRightLeftIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { QuestionMarkCircleIcon, ArrowsRightLeftIcon, LinkIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import { useSelection } from '@/side_panel/context/SelectionContext';
 import { useApi } from '@/hooks/useApi';
 import { StagedItem } from '@/utils/types';
@@ -23,36 +23,36 @@ export const RelationshipManager = () => {
   const [relType, setRelType] = useState('commentary');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [linkUnits, setLinkUnits] = useState<any[]>([]);
+  const [relationships, setRelationships] = useState<any[]>([]);
   const [currentPageId, setCurrentPageId] = useState<number>(0);
 
   useEffect(() => {
     const fetchStats = async () => {
-      // 1. Get current tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
 
       try {
-        // 2. Ask Page for its Cache (Since you confirmed highlights are working on the page)
+        // 1. Get Page Context (We need source_code/id to ask API)
         const res = await chrome.tabs.sendMessage(tab.id, { type: 'GET_CACHED_STATS' }).catch(() => null);
         
-        if (res && res.units) {
-          // 3. Filter EXCLUSIVELY for Link Subjects/Objects
-          const links = res.units.filter((u: any) => 
-            ['link_subject', 'link_object'].includes(u.unit_type)
-          );
-          setLinkUnits(links);
+        // Ensure we have context. Fallback to extracting from first unit if top-level missing.
+        const pageSourceCode = res?.source_code || res?.units?.[0]?.source_code;
+        const pageSourcePageId = res?.source_page_id || res?.units?.[0]?.source_page_id;
+
+        if (pageSourceCode && pageSourcePageId) {
+            const rels = await get(`/api/relationships?source_code=${pageSourceCode}&source_page_id=${pageSourcePageId}`);
+            setRelationships(rels || []);
         } else {
-          setLinkUnits([]);
+            setRelationships([]);
         }
       } catch (e) {
-        console.error("Failed to fetch page stats", e);
-        setLinkUnits([]);
+        console.error("Failed to fetch relationships", e);
+        setRelationships([]);
       }
     };
 
     fetchStats();
-  }, [selectedUnit]); // Re-run when selection changes
+  }, [selectedUnit]);
 
   // --- STANDARD HELPERS (State Persistence, etc.) ---
   useEffect(() => {
@@ -393,6 +393,7 @@ export const RelationshipManager = () => {
   // --- LIST MODE ---
   return (
     <div className="p-4 space-y-6 h-full flex flex-col">
+        {/* Header (Unchanged) */}
         <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 group relative">
                 <h2 className="text-lg font-bold text-slate-800">
@@ -407,38 +408,55 @@ export const RelationshipManager = () => {
             </div>
         </div>
 
-        {linkUnits.length > 0 ? (
+        {relationships.length > 0 ? (
             <div className="bg-slate-50 rounded border border-slate-200 p-3 flex flex-col h-full overflow-hidden">
                 <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide border-b border-slate-200 pb-1 flex-shrink-0">
-                    Active Links: {linkUnits.length}
+                    Active Links: {relationships.length}
                 </p>
                 
-                <div className="space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 flex-1 min-h-0">
-                    {linkUnits.map(unit => (
-                        <button 
-                            key={unit.id}
-                            onClick={() => handleJumpToUnit(unit)}
-                            className={`w-full text-left p-2 rounded border shadow-sm transition-all group flex flex-col gap-1 ${
-                                unit.unit_type === 'link_subject' 
-                                ? 'bg-blue-50 border-blue-200 hover:border-blue-400' 
-                                : 'bg-green-50 border-green-200 hover:border-green-400'
-                            }`}
-                        >
-                            <div className="flex items-start gap-2">
-                                <span className={`text-[10px] font-bold uppercase px-1.5 rounded ${
-                                    unit.unit_type === 'link_subject' ? 'text-blue-600 bg-blue-100' : 'text-green-700 bg-green-100'
-                                }`}>
-                                    {unit.unit_type === 'link_subject' ? 'Subject' : 'Object'}
-                                </span>
-                                {/* Display Relationship Type if available in cache, otherwise generic */}
-                                <span className="text-[10px] text-slate-400 uppercase font-bold bg-white px-1">
-                                    {unit.relationship_type || 'Linked'}
-                                </span>
+                <div className="space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 flex-1 min-h-0">
+                    {relationships.map((rel, idx) => (
+                        <div key={`${rel.subject_unit_id}-${rel.object_unit_id}-${idx}`} className="flex flex-col rounded border shadow-sm bg-white overflow-hidden">
+                            
+                            {/* SUBJECT (Top) */}
+                            <button 
+                                onClick={() => handleJumpToUnit({
+                                    id: rel.subject_unit_id,
+                                    source_code: rel.subject_source_code,
+                                    source_page_id: rel.subject_page_id,
+                                    title: rel.subject_text, // Use text as title fallback
+                                    text_content: rel.subject_text
+                                })}
+                                className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 transition-colors border-b border-blue-100"
+                            >
+                                <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 rounded uppercase mb-1 inline-block">Subject</span>
+                                <p className="text-xs text-slate-700 font-serif italic line-clamp-2">"{rel.subject_text}"</p>
+                            </button>
+
+                            {/* CONNECTOR (Middle) */}
+                            <div className="flex justify-center items-center py-1 bg-slate-50 border-b border-slate-100">
+                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase">
+                                    <ArrowsUpDownIcon className="w-3 h-3" />
+                                    <span>{rel.relationship_type}</span>
+                                </div>
                             </div>
-                            <span className="text-xs text-slate-700 font-serif italic line-clamp-2">
-                                "{unit.text_content}"
-                            </span>
-                        </button>
+
+                            {/* OBJECT (Bottom) */}
+                            <button 
+                                onClick={() => handleJumpToUnit({
+                                    id: rel.object_unit_id,
+                                    source_code: rel.object_source_code,
+                                    source_page_id: rel.object_page_id,
+                                    title: rel.object_text,
+                                    text_content: rel.object_text
+                                })}
+                                className="w-full text-left p-2 bg-green-50 hover:bg-green-100 transition-colors"
+                            >
+                                <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 rounded uppercase mb-1 inline-block">Object</span>
+                                <p className="text-xs text-slate-700 font-serif italic line-clamp-2">"{rel.object_text}"</p>
+                            </button>
+
+                        </div>
                     ))}
                 </div>
             </div>
