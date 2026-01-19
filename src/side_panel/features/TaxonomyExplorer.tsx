@@ -336,15 +336,6 @@ const TaxonomyNode = ({
                     </span>
                     <span>{node.label}</span>
                 </div>
-
-                {isEditMode && !node.is_official && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onDeleteTag(node, node.children.length > 0); }}
-                        className="ml-2 text-slate-300 hover:text-red-500 p-1"
-                    >
-                        <TrashIcon className="w-4 h-4" />
-                    </button>
-                )}
             </div>
 
             {isExpanded && !isDragging && (
