@@ -2,9 +2,8 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useApi } from '@/hooks/useApi';
 import { DefinedTag, LogicalUnit } from '@/utils/types';
 import { 
-    ChevronRightIcon, ChevronDownIcon, UserIcon, 
-    BuildingLibraryIcon, TrashIcon, Bars2Icon, ExclamationTriangleIcon,
-    PlusIcon
+    TrashIcon, Bars2Icon, ExclamationTriangleIcon,
+    PlusIcon, FolderIcon, FolderOpenIcon
 } from '@heroicons/react/24/solid';
 import {
     DndContext, 
@@ -48,6 +47,9 @@ export const TaxonomyExplorer: React.FC<Props> = ({
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<number>>(new Set());
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
 
+  // [NEW] Track the "Active" (Green) folder
+  const [activeFocusId, setActiveFocusId] = useState<number | null>(null);
+
   // 1. Initial Load
   useEffect(() => {
     setLoading(true);
@@ -77,10 +79,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
 
     get(`/api/units/${revealUnitId}/tags`).then((tags: DefinedTag[]) => {
         if (tags.length === 0) return;
-
-        // Take only the FIRST tag. 
-        // This prevents opening multiple folders and triggering multiple "scroll" 
-        // events that race against each other.
         const primaryTag = tags[0]; 
         
         const idsToExpand = new Set(expandedNodeIds);
@@ -89,11 +87,13 @@ export const TaxonomyExplorer: React.FC<Props> = ({
         if (path) {
             path.forEach(id => idsToExpand.add(id));
             setExpandedNodeIds(idsToExpand);
+            // Also set focus to the immediate parent tag
+            setActiveFocusId(primaryTag.id);
         }
     });
   }, [revealUnitId, localTree]);
 
-  // 3. DnD Handlers
+  // 3. DnD Handlers (Unchanged logic, kept for context)
   const handleDragStart = (event: DragStartEvent) => {
       setActiveDragId(event.active.id as number);
   };
@@ -138,16 +138,10 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     const { cleaned, movedNode } = removeNode(localTree, activeId);
     
     if (movedNode) {
-        // CASE A: Dropped into Root Zone
         if (overId === 'ROOT_DROP_ZONE') {
-             // Prepend to the top of the list instead of appending to the bottom.
-             // This keeps the item near the drop zone (top) and prevents auto-scrolling 
-             // to the bottom of the page.
              setLocalTree([movedNode, ...cleaned]);
              onTreeChange([{ id: activeId, parent_id: null }]);
-        } 
-        // CASE B: Dropped into another tag (Nesting)
-        else {
+        } else {
              const newTree = insertNode(cleaned, overId as number, movedNode);
              setLocalTree(newTree);
              onTreeChange([{ id: activeId, parent_id: overId as number }]);
@@ -176,9 +170,18 @@ export const TaxonomyExplorer: React.FC<Props> = ({
   const handleToggleExpand = (id: number) => {
       const newSet = new Set(expandedNodeIds);
       if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
+      else {
+          newSet.add(id);
+          // [NEW] Set active focus when opening
+          setActiveFocusId(id);
+      }
       setExpandedNodeIds(newSet);
   };
+
+  // [NEW] Handler for activating focus without toggling (optional, for clicking already open tags)
+  const handleActivate = (id: number) => {
+      setActiveFocusId(id);
+  }
 
   if (loading) return <div className="p-4 text-xs text-slate-400">Loading...</div>;
 
@@ -187,7 +190,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
         <div className="pb-10 px-2"> 
            {isEditMode && <RootDropZone />}
 
-           {/* [CHANGED] Display Tree Logic */}
            {displayTree.length === 0 ? (
                <div className="flex flex-col items-center justify-center p-6 text-center">
                    {filter.trim().length > 0 && (
@@ -213,6 +215,8 @@ export const TaxonomyExplorer: React.FC<Props> = ({
                      isSelectionMode={isSelectionMode}
                      isExpanded={node.forceExpand || false}
                      onToggleExpand={handleToggleExpand}
+                     onActivate={handleActivate}
+                     isActiveFocus={activeFocusId === node.id}
                      onUnitClick={onUnitClick}
                    />
                ))
@@ -230,7 +234,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
   );
 };
 
-// [NEW] Root Drop Zone Component
 const RootDropZone = () => {
     const { setNodeRef, isOver } = useDroppable({ id: 'ROOT_DROP_ZONE' });
     return (
@@ -249,13 +252,24 @@ const RootDropZone = () => {
     );
 };
 
+// [NEW] Custom Double Folder Icon for "Has Children" state
+const DoubleFolderIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+    <div className={`relative ${className}`}>
+        {/* Back folder */}
+        <FolderIcon className="absolute top-0 right-0 w-3.5 h-3.5 text-slate-400 opacity-80" />
+        {/* Front folder */}
+        <FolderIcon className="absolute bottom-0 left-0 w-3.5 h-3.5 text-slate-500 z-10" />
+    </div>
+);
+
 const TaxonomyNode = ({ 
-    node, isEditMode, onEditTag, highlightUnitId, refreshKey, onTagSelect, isSelectionMode, isExpanded, onToggleExpand, onUnitClick
+    node, isEditMode, onEditTag, highlightUnitId, refreshKey, 
+    onTagSelect, isSelectionMode, isExpanded, onToggleExpand, 
+    onActivate, isActiveFocus, onUnitClick
 }: any) => {
     const { get } = useApi();
     const [units, setUnits] = useState<LogicalUnit[]>([]);
     
-    // [NEW] Ref to scroll to the active snippet
     const activeUnitRef = useRef<HTMLDivElement>(null);
 
     const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
@@ -268,17 +282,14 @@ const TaxonomyNode = ({
         disabled: !isEditMode
     });
 
-    // 1. Fetch Units when expanded
     useEffect(() => {
         if (isExpanded && units.length === 0 && !isEditMode) {
              get(`/api/units?tag_id=${node.id}`).then(setUnits).catch(() => {});
         }
     }, [isExpanded, refreshKey, isEditMode]);
 
-    // [NEW] 2. Scroll into view when the active unit appears
     useEffect(() => {
         if (activeUnitRef.current && highlightUnitId) {
-            // Slight delay ensures the tree expansion animation (if any) has settled
             setTimeout(() => {
                 activeUnitRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
@@ -291,7 +302,7 @@ const TaxonomyNode = ({
         opacity: isDragging ? 0.5 : 1
     } : undefined;
 
-    const handleLabelClick = (e: React.MouseEvent) => {
+    const handleNodeClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isEditMode) {
             if (!node.is_official) onEditTag(node);
@@ -300,45 +311,62 @@ const TaxonomyNode = ({
         if (isSelectionMode) {
             onTagSelect(node);
         } else {
+            // [CHANGED] Combined click: Toggle expand and set Active
             onToggleExpand(node.id);
+            if (!isExpanded) onActivate(node.id); // If opening, activate
         }
     };
 
+    // [NEW] Icon Selection Logic
+    const renderIcon = () => {
+        if (isExpanded) {
+            return <FolderOpenIcon className={`w-5 h-5 ${isActiveFocus ? 'text-green-600' : 'text-blue-400'}`} />;
+        }
+        // "Double closed folder if children tags exist"
+        if (node.children && node.children.length > 0) {
+            return <DoubleFolderIcon className="w-5 h-5" />;
+        }
+        // "Single closed folder if no child"
+        return <FolderIcon className="w-4 h-4 text-slate-400" />;
+    };
+
     return (
-        <div ref={setDropRef} className={`ml-3 border-l border-slate-200 pl-2 transition-colors ${isOver ? 'bg-blue-50 rounded-l border-blue-300' : ''}`}>
-            <div ref={setDragRef} style={style} className={`flex items-center py-1 rounded text-sm select-none group ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm' : ''}`}>
-                
+        // [CHANGED] Removed border-l, added general padding
+        <div ref={setDropRef} className={`ml-3 pl-2 transition-colors duration-300 rounded-lg ${isOver ? 'bg-blue-50 ring-1 ring-blue-300' : ''}`}>
+            
+            <div 
+                ref={setDragRef} 
+                style={style} 
+                className={`
+                    flex items-center py-1.5 px-2 rounded cursor-pointer select-none group transition-colors mb-0.5
+                    ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm' : ''}
+                    ${isActiveFocus && !isDragging ? 'bg-green-100 text-green-800 shadow-sm' : 'hover:bg-slate-100 text-slate-700'}
+                `}
+                onClick={handleNodeClick}
+                title={isEditMode ? "Edit Tag" : "Toggle Folder"}
+            >
+                {/* Drag Handle (Only in Edit Mode) */}
                 {isEditMode && !node.is_official && (
-                    <div {...listeners} {...attributes} className="mr-1 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 p-1">
-                        <div className="w-4 h-4"><Bars2Icon /></div>
+                    <div {...listeners} {...attributes} className="mr-2 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
+                        <Bars2Icon className="w-4 h-4"/>
                     </div>
                 )}
 
-                <div 
-                    className="mr-1 text-slate-400 cursor-pointer p-0.5 hover:text-slate-700 hover:bg-slate-200 rounded"
-                    onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }}
-                >
-                     {node.children.length > 0 || (isExpanded && units.length > 0 && !isEditMode) ? (
-                         isExpanded ? <ChevronDownIcon className="h-3 w-3" /> : <ChevronRightIcon className="h-3 w-3" />
-                     ) : <span className="w-3 h-3 block"></span>}
+                {/* Folder Icon */}
+                <div className="mr-2 flex-shrink-0">
+                    {renderIcon()}
                 </div>
 
-                <div 
-                    className={`flex items-center flex-1 cursor-pointer hover:bg-slate-100 px-1 rounded ${
-                        (isSelectionMode && !isEditMode) || (isEditMode && !node.is_official) ? 'hover:text-blue-600 hover:font-semibold' : 'text-slate-700'
-                    }`}
-                    onClick={handleLabelClick}
-                    title={isEditMode ? "Rename tag" : (isSelectionMode ? "Click to add this tag" : "Click to expand")}
-                >
-                    <span className="mr-1.5">
-                        {node.is_official ? <BuildingLibraryIcon className="h-3 w-3 text-amber-500"/> : <UserIcon className="h-3 w-3 text-blue-400"/>}
-                    </span>
-                    <span>{node.label}</span>
+                {/* Tag Label */}
+                <div className={`flex-1 text-sm font-medium truncate ${isActiveFocus ? 'text-green-900' : ''}`}>
+                    {node.label}
                 </div>
             </div>
 
+            {/* Children & Units Container */}
             {isExpanded && !isDragging && (
-                <div>
+                <div className="space-y-0.5">
+                    {/* Render Children Tags */}
                     {node.children.map((child: any) => (
                         <TaxonomyNode 
                             key={child.id} 
@@ -351,44 +379,50 @@ const TaxonomyNode = ({
                             isSelectionMode={isSelectionMode}
                             isExpanded={child.forceExpand || false}
                             onToggleExpand={onToggleExpand}
+                            onActivate={onActivate}
+                            isActiveFocus={isActiveFocus} // NOTE: Focus stays on parent usually, but logic allows changing
                             onUnitClick={onUnitClick}
                         />
                     ))}
                     
-                    {!isEditMode && units.map((u: any) => {
-                        const isActive = highlightUnitId === u.id;
-                        const isBroken = u.broken_index === 1;
+                    {/* Render Units (Snippets) */}
+                    {/* [CHANGED] Add matching margin (ml-3) and background hue for active units */}
+                    {!isEditMode && units.length > 0 && (
+                        <div className={`mt-1 rounded-md overflow-hidden ${isActiveFocus ? 'bg-green-50/50 border border-green-100' : ''}`}>
+                            {units.map((u: any) => {
+                                const isActive = highlightUnitId === u.id;
+                                const isBroken = u.broken_index === 1;
 
-                        return (
-                            <div 
-                                key={u.id}
-                                ref={isActive ? activeUnitRef : null}
-                                className={`flex items-center ml-0 text-xs py-1 px-1 mb-1 rounded cursor-pointer truncate transition-all duration-500 ${
-                                    isActive 
-                                    ? 'bg-yellow-100 text-yellow-800 font-bold border border-yellow-300' 
-                                    : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
-                                }`}
-                                // [CHANGED] Pass 'true' to indicate this click originated from the Tree
-                                onClick={() => onUnitClick(u, true)} 
-                            >
-                                <span className="w-4 inline-block flex-shrink-0"></span>
-                                
-                                {isBroken ? (
-                                    <>
-                                        <ExclamationTriangleIcon className="w-3 h-3 text-red-500 mr-1" />
-                                        <span className="truncate border-b-2 border-red-400 border-dotted" title="Broken Link - Click to Repair">
-                                            {u.text_content.substring(0, 60)}...
+                                return (
+                                    <div 
+                                        key={u.id}
+                                        ref={isActive ? activeUnitRef : null}
+                                        // [CHANGED] Added ml-3 to align snippets with children tags
+                                        className={`
+                                            flex items-center ml-3 text-xs py-1.5 px-2 cursor-pointer truncate transition-all duration-200 border-l-2
+                                            ${isActive 
+                                                ? 'bg-yellow-50 text-yellow-900 font-semibold border-yellow-400' 
+                                                : `border-transparent hover:border-blue-300 hover:bg-white hover:text-blue-700 ${isActiveFocus ? 'text-green-800' : 'text-slate-500'}`
+                                            }
+                                        `}
+                                        onClick={(e) => { e.stopPropagation(); onUnitClick(u, true); }}
+                                    >
+                                        <span className="w-3 inline-block flex-shrink-0 mr-1 opacity-50 text-[10px]">
+                                            {isBroken ? '⚠️' : '📄'}
                                         </span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="mr-1">📄</span>
-                                        <span className="truncate">{u.text_content.substring(0, 60)}...</span>
-                                    </>
-                                )}
-                            </div>
-                        );
-                    })}
+                                        
+                                        {isBroken ? (
+                                             <span className="truncate italic opacity-75" title="Broken Link">
+                                                 {u.text_content.substring(0, 60)}...
+                                             </span>
+                                        ) : (
+                                             <span className="truncate">{u.text_content.substring(0, 60)}...</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
