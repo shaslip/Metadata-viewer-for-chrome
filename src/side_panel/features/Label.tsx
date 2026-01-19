@@ -211,9 +211,7 @@ export const Label = () => {
         ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
                 <PencilSquareIcon className="h-12 w-12 mb-2 opacity-20" /> 
-                <p className="text-sm max-w-xs">
-                    Select text on the page to begin labeling a new logical unit.
-                </p>
+                <p className="text-sm">This tab coulb be used to highlight a tablet from ‘Abdu’l-Bahá in Star of the West or letter from the Guardian in Bahá’í News.</p>
             </div>
         )}
     </div>
