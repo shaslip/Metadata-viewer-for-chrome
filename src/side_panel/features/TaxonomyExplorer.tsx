@@ -35,6 +35,16 @@ interface Props {
     onCreateTag: (label: string) => void;
 }
 
+// [CHANGED] Tighter, Blue-on-Blue Double Folder Icon
+const DoubleFolderIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+    <div className={`relative flex items-center justify-center ${className}`}>
+        {/* Back folder: Lighter blue, slightly offset up/right */}
+        <FolderIcon className="absolute -top-0.5 -right-0.5 w-4 h-4 text-blue-300" />
+        {/* Front folder: Main blue, z-index to sit on top */}
+        <FolderIcon className="relative w-4 h-4 text-blue-500 z-10" />
+    </div>
+);
+
 export const TaxonomyExplorer: React.FC<Props> = ({ 
     filter, viewMode, revealUnitId, refreshKey, 
     onTagSelect, isSelectionMode, isEditMode, onTreeChange, 
@@ -47,7 +57,7 @@ export const TaxonomyExplorer: React.FC<Props> = ({
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<number>>(new Set());
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
 
-  // [NEW] Track the "Active" (Green) folder
+  // Track the "Active" (Green) folder
   const [activeFocusId, setActiveFocusId] = useState<number | null>(null);
 
   // 1. Initial Load
@@ -87,13 +97,12 @@ export const TaxonomyExplorer: React.FC<Props> = ({
         if (path) {
             path.forEach(id => idsToExpand.add(id));
             setExpandedNodeIds(idsToExpand);
-            // Also set focus to the immediate parent tag
             setActiveFocusId(primaryTag.id);
         }
     });
   }, [revealUnitId, localTree]);
 
-  // 3. DnD Handlers (Unchanged logic, kept for context)
+  // 3. DnD Handlers
   const handleDragStart = (event: DragStartEvent) => {
       setActiveDragId(event.active.id as number);
   };
@@ -139,6 +148,7 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     
     if (movedNode) {
         if (overId === 'ROOT_DROP_ZONE') {
+             // Prepend to top
              setLocalTree([movedNode, ...cleaned]);
              onTreeChange([{ id: activeId, parent_id: null }]);
         } else {
@@ -172,13 +182,11 @@ export const TaxonomyExplorer: React.FC<Props> = ({
       if (newSet.has(id)) newSet.delete(id);
       else {
           newSet.add(id);
-          // [NEW] Set active focus when opening
           setActiveFocusId(id);
       }
       setExpandedNodeIds(newSet);
   };
 
-  // [NEW] Handler for activating focus without toggling (optional, for clicking already open tags)
   const handleActivate = (id: number) => {
       setActiveFocusId(id);
   }
@@ -216,7 +224,8 @@ export const TaxonomyExplorer: React.FC<Props> = ({
                      isExpanded={node.forceExpand || false}
                      onToggleExpand={handleToggleExpand}
                      onActivate={handleActivate}
-                     isActiveFocus={activeFocusId === node.id}
+                     // [CHANGED] Pass strict ID check, not a cascading boolean
+                     activeFocusId={activeFocusId}
                      onUnitClick={onUnitClick}
                    />
                ))
@@ -252,23 +261,16 @@ const RootDropZone = () => {
     );
 };
 
-// [NEW] Custom Double Folder Icon for "Has Children" state
-const DoubleFolderIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
-    <div className={`relative ${className}`}>
-        {/* Back folder */}
-        <FolderIcon className="absolute top-0 right-0 w-3.5 h-3.5 text-slate-400 opacity-80" />
-        {/* Front folder */}
-        <FolderIcon className="absolute bottom-0 left-0 w-3.5 h-3.5 text-slate-500 z-10" />
-    </div>
-);
-
 const TaxonomyNode = ({ 
     node, isEditMode, onEditTag, highlightUnitId, refreshKey, 
     onTagSelect, isSelectionMode, isExpanded, onToggleExpand, 
-    onActivate, isActiveFocus, onUnitClick
+    onActivate, activeFocusId, onUnitClick
 }: any) => {
     const { get } = useApi();
     const [units, setUnits] = useState<LogicalUnit[]>([]);
+    
+    // [CHANGED] Strict Active Check for this specific node
+    const isActive = activeFocusId === node.id;
     
     const activeUnitRef = useRef<HTMLDivElement>(null);
 
@@ -311,27 +313,23 @@ const TaxonomyNode = ({
         if (isSelectionMode) {
             onTagSelect(node);
         } else {
-            // [CHANGED] Combined click: Toggle expand and set Active
             onToggleExpand(node.id);
-            if (!isExpanded) onActivate(node.id); // If opening, activate
+            if (!isExpanded) onActivate(node.id);
         }
     };
 
-    // [NEW] Icon Selection Logic
     const renderIcon = () => {
         if (isExpanded) {
-            return <FolderOpenIcon className={`w-5 h-5 ${isActiveFocus ? 'text-green-600' : 'text-blue-400'}`} />;
+            // [CHANGED] Green when active, otherwise standard Blue
+            return <FolderOpenIcon className={`w-5 h-5 ${isActive ? 'text-green-600' : 'text-blue-500'}`} />;
         }
-        // "Double closed folder if children tags exist"
         if (node.children && node.children.length > 0) {
             return <DoubleFolderIcon className="w-5 h-5" />;
         }
-        // "Single closed folder if no child"
-        return <FolderIcon className="w-4 h-4 text-slate-400" />;
+        return <FolderIcon className="w-4 h-4 text-blue-400" />;
     };
 
     return (
-        // [CHANGED] Removed border-l, added general padding
         <div ref={setDropRef} className={`ml-3 pl-2 transition-colors duration-300 rounded-lg ${isOver ? 'bg-blue-50 ring-1 ring-blue-300' : ''}`}>
             
             <div 
@@ -340,12 +338,15 @@ const TaxonomyNode = ({
                 className={`
                     flex items-center py-1.5 px-2 rounded cursor-pointer select-none group transition-colors mb-0.5
                     ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm' : ''}
-                    ${isActiveFocus && !isDragging ? 'bg-green-100 text-green-800 shadow-sm' : 'hover:bg-slate-100 text-slate-700'}
+                    
+                    /* [CHANGED] Hover is standard Blue/Slate. Active is strictly Text Green, NO background. */
+                    ${!isDragging && !isActive ? 'hover:bg-slate-100 text-slate-700 hover:text-blue-600' : ''}
+                    ${isActive && !isDragging ? 'text-green-600 font-medium' : ''}
                 `}
                 onClick={handleNodeClick}
                 title={isEditMode ? "Edit Tag" : "Toggle Folder"}
             >
-                {/* Drag Handle (Only in Edit Mode) */}
+                {/* Drag Handle */}
                 {isEditMode && !node.is_official && (
                     <div {...listeners} {...attributes} className="mr-2 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
                         <Bars2Icon className="w-4 h-4"/>
@@ -358,7 +359,7 @@ const TaxonomyNode = ({
                 </div>
 
                 {/* Tag Label */}
-                <div className={`flex-1 text-sm font-medium truncate ${isActiveFocus ? 'text-green-900' : ''}`}>
+                <div className="flex-1 text-sm truncate">
                     {node.label}
                 </div>
             </div>
@@ -380,29 +381,34 @@ const TaxonomyNode = ({
                             isExpanded={child.forceExpand || false}
                             onToggleExpand={onToggleExpand}
                             onActivate={onActivate}
-                            isActiveFocus={isActiveFocus} // NOTE: Focus stays on parent usually, but logic allows changing
+                            // [CHANGED] Pass parent Active ID so child knows it is NOT active
+                            activeFocusId={activeFocusId}
                             onUnitClick={onUnitClick}
                         />
                     ))}
                     
                     {/* Render Units (Snippets) */}
-                    {/* [CHANGED] Add matching margin (ml-3) and background hue for active units */}
                     {!isEditMode && units.length > 0 && (
-                        <div className={`mt-1 rounded-md overflow-hidden ${isActiveFocus ? 'bg-green-50/50 border border-green-100' : ''}`}>
+                        <div className="mt-1 rounded-md overflow-hidden">
                             {units.map((u: any) => {
-                                const isActive = highlightUnitId === u.id;
+                                const isUnitSelected = highlightUnitId === u.id;
                                 const isBroken = u.broken_index === 1;
 
                                 return (
                                     <div 
                                         key={u.id}
-                                        ref={isActive ? activeUnitRef : null}
-                                        // [CHANGED] Added ml-3 to align snippets with children tags
+                                        ref={isUnitSelected ? activeUnitRef : null}
                                         className={`
                                             flex items-center ml-3 text-xs py-1.5 px-2 cursor-pointer truncate transition-all duration-200 border-l-2
-                                            ${isActive 
+                                            
+                                            /* [CHANGED] Selected Unit: Yellow/Bold */
+                                            /* [CHANGED] Active Parent: Text Green */
+                                            /* [CHANGED] Inactive Parent: Text Slate (Standard) */
+                                            
+                                            ${isUnitSelected 
                                                 ? 'bg-yellow-50 text-yellow-900 font-semibold border-yellow-400' 
-                                                : `border-transparent hover:border-blue-300 hover:bg-white hover:text-blue-700 ${isActiveFocus ? 'text-green-800' : 'text-slate-500'}`
+                                                : `border-transparent hover:border-blue-300 hover:bg-white hover:text-blue-700 
+                                                   ${isActive ? 'text-green-600' : 'text-slate-500'}`
                                             }
                                         `}
                                         onClick={(e) => { e.stopPropagation(); onUnitClick(u, true); }}
