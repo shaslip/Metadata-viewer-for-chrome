@@ -104,7 +104,6 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     if (!over || active.id === over.id) return;
 
     const activeId = active.id as number;
-    // Over ID can be string ('ROOT_DROP_ZONE') or number (Tag ID)
     const overId = over.id; 
 
     const removeNode = (nodes: TreeNode[], id: number): { cleaned: TreeNode[], movedNode: TreeNode | null } => {
@@ -141,8 +140,10 @@ export const TaxonomyExplorer: React.FC<Props> = ({
     if (movedNode) {
         // CASE A: Dropped into Root Zone
         if (overId === 'ROOT_DROP_ZONE') {
-             // Add to root level of cleaned tree
-             setLocalTree([...cleaned, movedNode]);
+             // Prepend to the top of the list instead of appending to the bottom.
+             // This keeps the item near the drop zone (top) and prevents auto-scrolling 
+             // to the bottom of the page.
+             setLocalTree([movedNode, ...cleaned]);
              onTreeChange([{ id: activeId, parent_id: null }]);
         } 
         // CASE B: Dropped into another tag (Nesting)
