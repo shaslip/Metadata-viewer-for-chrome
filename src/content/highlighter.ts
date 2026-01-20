@@ -305,7 +305,7 @@ const verifyAndHealUnits = async () => {
     }
 };
 
-// [NEW] Footer Component Injection
+// Footer Component Injection
 const renderBrokenLinksFooter = (brokenUnits: LogicalUnit[]) => {
     // 1. Cleanup existing
     const existing = document.getElementById('rag-broken-footer');
@@ -316,21 +316,28 @@ const renderBrokenLinksFooter = (brokenUnits: LogicalUnit[]) => {
         return;
     }
 
+    // Check System Dark Mode Preference
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
     // 2. Create Container
     const container = document.createElement('div');
     container.id = 'rag-broken-footer';
     container.style.cssText = `
         position: fixed; bottom: 0; left: 0; right: 0;
-        background: #fff1f2; border-top: 3px solid #e11d48;
+        background: ${isDark ? '#0f172a' : '#fff1f2'}; 
+        border-top: 3px solid #e11d48;
         padding: 12px 20px; z-index: 2147483647; font-family: sans-serif;
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
         display: flex; gap: 15px; align-items: center; 
-        flex-wrap: wrap;
+        flex-wrap: wrap; color-scheme: ${isDark ? 'dark' : 'light'};
     `;
 
     // 3. Label
     const label = document.createElement('div');
-    label.style.cssText = 'color: #be123c; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px;';
+    label.style.cssText = `
+        color: ${isDark ? '#fb7185' : '#be123c'}; 
+        font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px;
+    `;
     label.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
@@ -344,26 +351,40 @@ const renderBrokenLinksFooter = (brokenUnits: LogicalUnit[]) => {
         const btn = document.createElement('button');
         btn.textContent = `Jump to #${unit.id}`;
         btn.title = `Original text: "${unit.text_content.substring(0, 100)}..."`;
-        btn.style.cssText = `
-            background: #fff; border: 1px solid #e11d48; color: #e11d48;
+        
+        const btnBaseStyle = `
             padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
             font-weight: 600; transition: all 0.2s; white-space: nowrap;
         `;
+
+        // Apply Theme Styles
+        if (isDark) {
+            btn.style.cssText = `
+                ${btnBaseStyle}
+                background: #1e293b; border: 1px solid #be123c; color: #fda4af;
+            `;
+        } else {
+            btn.style.cssText = `
+                ${btnBaseStyle}
+                background: #fff; border: 1px solid #e11d48; color: #e11d48;
+            `;
+        }
         
         btn.addEventListener('mouseenter', () => {
             btn.style.background = '#e11d48';
             btn.style.color = '#fff';
         });
         btn.addEventListener('mouseleave', () => {
-            btn.style.background = '#fff';
-            btn.style.color = '#e11d48';
+            if (isDark) {
+                btn.style.background = '#1e293b';
+                btn.style.color = '#fda4af';
+            } else {
+                btn.style.background = '#fff';
+                btn.style.color = '#e11d48';
+            }
         });
 
         btn.onclick = () => {
-            // A. Open Sidebar if closed (optional, requires background support)
-            // chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' }); 
-
-            // B. Send Click Event (Tags.tsx will catch this -> Expand Tree -> Reveal)
             chrome.runtime.sendMessage({ type: 'UNIT_CLICKED', unit });
         };
 
@@ -376,7 +397,8 @@ const renderBrokenLinksFooter = (brokenUnits: LogicalUnit[]) => {
     closeBtn.title = "Dismiss";
     closeBtn.style.cssText = `
         margin-left: auto; background: none; border: none; 
-        font-size: 24px; color: #881337; cursor: pointer; line-height: 1;
+        font-size: 24px; cursor: pointer; line-height: 1;
+        color: ${isDark ? '#94a3b8' : '#881337'};
     `;
     closeBtn.onclick = () => {
         container.remove();
@@ -386,7 +408,7 @@ const renderBrokenLinksFooter = (brokenUnits: LogicalUnit[]) => {
 
     // 6. Append
     document.body.appendChild(container);
-    document.body.style.paddingBottom = '70px'; // Prevent content overlap
+    document.body.style.paddingBottom = '70px'; 
 };
 
 const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: number) => {
