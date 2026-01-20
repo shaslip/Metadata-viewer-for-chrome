@@ -107,7 +107,7 @@ export const Label = () => {
       return (
           <div className="p-4 space-y-6">
               <div className="flex justify-between items-center">
-                 <h2 className="text-lg font-bold text-slate-800">Repair Unit</h2>
+                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Repair Unit</h2>
               </div>
               <UnitForm 
                   existingUnit={repairTarget}
@@ -127,7 +127,7 @@ export const Label = () => {
     return (
       <div className="p-4 space-y-6">
         <div className="flex justify-between items-center">
-             <h2 className="text-lg font-bold text-slate-800">Edit Unit</h2>
+             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Edit Unit</h2>
         </div>
         <UnitForm 
           existingUnit={selectedUnit}
@@ -144,7 +144,7 @@ export const Label = () => {
     return (
       <div className="p-4 space-y-6">
         <div className="flex justify-between items-center">
-             <h2 className="text-lg font-bold text-slate-800">New Addition</h2>
+             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">New Addition</h2>
         </div>
         <UnitForm 
           selection={currentSelection.text}
@@ -163,42 +163,42 @@ export const Label = () => {
     <div className="p-4 space-y-6 h-full flex flex-col">
         <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 group relative">
-                <h2 className="text-lg font-bold text-slate-800">
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
                     Label Manager
                 </h2>
                 <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
                 
-                <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
+                <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed dark:bg-slate-700">
                     <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
                     <p>Highlight a tablet, prayer, or historical account to label it.</p>
-                    <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800"></div>
+                    <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800 dark:border-b-slate-700"></div>
                 </div>
             </div>
         </div>
 
         {pageUnits.length > 0 ? (
-            <div className="bg-blue-50 rounded border border-blue-100 p-3 animate-in fade-in duration-500 flex flex-col h-full overflow-hidden">
-                <p className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide border-b border-blue-200 pb-1 flex-shrink-0">
+            <div className="bg-blue-50 rounded border border-blue-100 p-3 animate-in fade-in duration-500 flex flex-col h-full overflow-hidden dark:bg-slate-900 dark:border-slate-700">
+                <p className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide border-b border-blue-200 pb-1 flex-shrink-0 dark:text-blue-300 dark:border-slate-700">
                     This page contains: {pageUnits.length} Unit{pageUnits.length !== 1 ? 's' : ''}
                 </p>
                 
-                <div className="space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-blue-200 flex-1 min-h-0">
+                <div className="space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-blue-200 dark:scrollbar-thumb-slate-700 flex-1 min-h-0">
                     {pageUnits.map(unit => (
                         <button 
                             key={unit.id}
                             onClick={() => handleUnitJump(unit)}
-                            className="w-full text-left bg-white p-2 rounded border border-blue-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group flex flex-col gap-1"
+                            className="w-full text-left bg-white p-2 rounded border border-blue-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group flex flex-col gap-1 dark:bg-slate-950 dark:border-slate-800 dark:hover:border-blue-700"
                         >
                             <div className="flex items-start gap-2">
                                 <DocumentTextIcon className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0 group-hover:text-blue-600" />
-                                <span className="text-xs text-slate-600 font-serif italic line-clamp-2 group-hover:text-slate-800 break-words">
+                                <span className="text-xs text-slate-600 font-serif italic line-clamp-2 group-hover:text-slate-800 break-words dark:text-slate-300 dark:group-hover:text-slate-100">
                                     "{unit.text_content}"
                                 </span>
                             </div>
                             
                             {/* CLEAN METADATA LINE */}
-                            <div className="w-full text-right mt-1 border-t border-slate-50 pt-1">
-                                <span className="text-[10px] text-slate-500 group-hover:text-blue-600 font-medium">
+                            <div className="w-full text-right mt-1 border-t border-slate-50 pt-1 dark:border-slate-800">
+                                <span className="text-[10px] text-slate-500 group-hover:text-blue-600 font-medium dark:text-slate-400 dark:group-hover:text-blue-400">
                                     Author: {unit.author || 'Unknown'}
                                     <span className="mx-1">•</span>
                                     Type: {capitalize(unit.unit_type)}
@@ -209,9 +209,9 @@ export const Label = () => {
                 </div>
             </div>
         ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 dark:text-slate-500">
                 <PencilSquareIcon className="h-12 w-12 mb-2 opacity-20" /> 
-                <p className="text-sm">This tab coulb be used to highlight a tablet from ‘Abdu’l-Bahá in Star of the West or letter from the Guardian in Bahá’í News.</p>
+                <p className="text-sm">This tab could be used to highlight a tablet from ‘Abdu’l-Bahá in Star of the West or letter from the Guardian in Bahá’í News.</p>
             </div>
         )}
     </div>
