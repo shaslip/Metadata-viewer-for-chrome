@@ -39,7 +39,7 @@ interface Props {
 const DoubleFolderIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
     <div className={`relative flex items-center justify-center ${className}`}>
         {/* Back folder */}
-        <FolderIcon className="absolute -top-0.5 -right-0.5 w-4 h-4 text-blue-300/80" />
+        <FolderIcon className="absolute -top-0.5 -right-0.5 w-4 h-4 text-blue-300/80 dark:text-blue-500/80" />
         {/* Front folder */}
         <FolderIcon className="relative w-4 h-4 text-blue-400 z-10" />
     </div>
@@ -252,8 +252,8 @@ const RootDropZone = () => {
             className={`
                 mb-2 p-3 border-2 border-dashed rounded-lg text-center text-xs font-bold transition-all duration-200
                 ${isOver 
-                    ? 'border-blue-400 bg-blue-50 text-blue-400 scale-[1.02] shadow-sm' 
-                    : 'border-slate-200 text-slate-400 hover:border-slate-300'
+                    ? 'border-blue-400 bg-blue-50 text-blue-400 scale-[1.02] shadow-sm dark:bg-blue-900/20 dark:border-blue-500' 
+                    : 'border-slate-200 text-slate-400 hover:border-slate-300 dark:border-slate-700 dark:text-slate-500 dark:hover:border-slate-600'
                 }
             `}
         >
@@ -330,29 +330,29 @@ const TaxonomyNode = ({
     };
 
     return (
-        <div ref={setDropRef} className={`ml-3 pl-2 transition-colors duration-300 rounded-lg ${isOver ? 'bg-blue-50 ring-1 ring-blue-300' : ''}`}>
+        <div ref={setDropRef} className={`ml-3 pl-2 transition-colors duration-300 rounded-lg ${isOver ? 'bg-blue-50 ring-1 ring-blue-300 dark:bg-blue-900/20 dark:ring-blue-700' : ''}`}>
             
             <div 
                 ref={setDragRef} 
                 style={style} 
                 className={`
                     flex items-center py-1.5 px-2 rounded cursor-pointer select-none group transition-colors mb-0.5
-                    ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm' : ''}
+                    ${isDragging ? 'bg-white ring-2 ring-blue-400 shadow-sm dark:bg-slate-800 dark:ring-blue-600' : ''}
                     
-                    ${!isDragging && !isActive ? 'text-slate-700' : ''}
-                    ${isActive && !isDragging ? 'text-blue-500 font-medium' : ''}
+                    ${!isDragging && !isActive ? 'text-slate-700 dark:text-slate-300' : ''}
+                    ${isActive && !isDragging ? 'text-blue-500 font-medium dark:text-blue-400' : ''}
                 `}
                 onClick={handleNodeClick}
                 title={isEditMode ? "Edit Tag" : "Toggle Folder"}
             >
                 {/* Drag Handle */}
                 {isEditMode && !node.is_official && (
-                    <div {...listeners} {...attributes} className="mr-2 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
+                    <div {...listeners} {...attributes} className="mr-2 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
                         <Bars2Icon className="w-4 h-4"/>
                     </div>
                 )}
 
-                {/* [CHANGED] Fixed Width Icon Container for Alignment */}
+                {/* Fixed Width Icon Container for Alignment */}
                 <div className="w-6 flex items-center justify-center mr-1 flex-shrink-0">
                     {renderIcon()}
                 </div>
@@ -400,9 +400,9 @@ const TaxonomyNode = ({
                                             flex items-center ml-3 text-xs py-1.5 px-2 cursor-pointer truncate transition-all duration-200 border-l-2
                                             
                                             ${isUnitSelected 
-                                                ? 'bg-yellow-50 text-yellow-900 font-semibold border-yellow-400'
+                                                ? 'bg-yellow-50 text-yellow-900 font-semibold border-yellow-400 dark:bg-yellow-900/20 dark:text-yellow-200 dark:border-yellow-700'
                                                 : `border-transparent
-                                                   ${isActive ? 'text-blue-400' : 'text-slate-500'}`
+                                                   ${isActive ? 'text-blue-400' : 'text-slate-500 dark:text-slate-400'}`
                                             }
                                         `}
                                         onClick={(e) => { e.stopPropagation(); onUnitClick(u, true); }}
