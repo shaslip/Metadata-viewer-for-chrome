@@ -237,7 +237,7 @@ export const RelationshipManager = () => {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full text-xs border-slate-300 rounded p-1.5 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        className="w-full text-xs border-slate-300 rounded p-1.5 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
       >
         {AUTHOR_OPTIONS.map(opt => (
           <option key={opt} value={opt}>{opt === 'Other' ? 'All others' : opt}</option>
@@ -253,17 +253,17 @@ export const RelationshipManager = () => {
   if (selectedUnit && (selectedUnit.unit_type === 'link_subject' || selectedUnit.unit_type === 'link_object')) {
     return (
       <div className="p-4 space-y-4">
-         <h2 className="text-lg font-bold text-slate-800">Manage Link</h2>
-         <div className="p-4 bg-slate-100 rounded border border-slate-300">
-            <span className="text-xs font-bold text-slate-500 uppercase block mb-2">
+         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Link</h2>
+         <div className="p-4 bg-slate-100 rounded border border-slate-300 dark:bg-slate-900 dark:border-slate-700">
+            <span className="text-xs font-bold text-slate-500 uppercase block mb-2 dark:text-slate-400">
               Selected {selectedUnit.unit_type === 'link_subject' ? 'Subject' : 'Object'}
             </span>
-            <p className="text-sm italic text-slate-700 mb-4">"{selectedUnit.text_content}"</p>
+            <p className="text-sm italic text-slate-700 mb-4 dark:text-slate-300">"{selectedUnit.text_content}"</p>
             
             <div className="flex gap-2">
               <button 
                 onClick={clearSelection}
-                className="flex-1 py-2 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50"
+                className="flex-1 py-2 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Back
               </button>
@@ -285,26 +285,26 @@ export const RelationshipManager = () => {
     return (
         <div className="p-4 space-y-6">
         <div className="flex items-center gap-2 group relative">
-            <h2 className="text-lg font-bold text-slate-800">Knowledge Linker</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Knowledge Linker</h2>
             <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
 
-            <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
+            <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed dark:bg-slate-700">
             <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
             <p>This tab could be used to link a specific Hidden Word to the commentary or explanations about it. These connections inform bahai.chat as it's answering questions on that particular topic.</p>
-            <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800"></div>
+            <div className="absolute bottom-full left-6 border-8 border-transparent border-b-slate-800 dark:border-b-slate-700"></div>
             </div>
         </div>
         
         {/* SUBJECT */}
-        <div className={`p-3 rounded border ${subject ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200 border-dashed'}`}>
+        <div className={`p-3 rounded border ${subject ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-slate-50 border-slate-200 border-dashed dark:bg-slate-900 dark:border-slate-700'}`}>
             <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-bold text-slate-500">SUBJECT (Origin)</span>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">SUBJECT (Origin)</span>
             {subject && <button onClick={() => updateState('subject', null)} className="text-xs text-red-500 hover:underline">Clear</button>}
             </div>
             
             {subject ? (
             <>
-                <p className="text-sm line-clamp-3 italic mb-2">
+                <p className="text-sm line-clamp-3 italic mb-2 dark:text-slate-300">
                 "{subject.type === 'existing' ? subject.unit.text_content : subject.text}"
                 </p>
                 {subject.type === 'new' ? (
@@ -314,7 +314,7 @@ export const RelationshipManager = () => {
                     disabled={isSubjectAuto}
                 />
                 ) : (
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
                     Author: <span className="font-semibold">{subject.unit.author}</span>
                 </div>
                 )}
@@ -323,7 +323,7 @@ export const RelationshipManager = () => {
             <button 
                 onClick={() => updateState('subject', captureSelection())}
                 disabled={!currentSelection && !selectedUnit}
-                className="w-full py-2 text-sm bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                className="w-full py-2 text-sm bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
             >
                 Set Current Selection
             </button>
@@ -332,30 +332,30 @@ export const RelationshipManager = () => {
 
         {/* REL TYPE */}
         <div className="flex items-center gap-2">
-            <div className="h-px bg-slate-200 flex-1"></div>
+            <div className="h-px bg-slate-200 flex-1 dark:bg-slate-700"></div>
             <select 
             value={relType} 
             onChange={(e) => updateState('relType', e.target.value)}
-            className="text-sm border-slate-300 rounded p-1 bg-white font-medium text-slate-700"
+            className="text-sm border-slate-300 rounded p-1 bg-white font-medium text-slate-700 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
             >
             <option value="commentary">Commentary on</option>
             <option value="translation">Translation of</option>
             <option value="refutation">Refutation of</option>
             <option value="allusion">Allusion to</option>
             </select>
-            <div className="h-px bg-slate-200 flex-1"></div>
+            <div className="h-px bg-slate-200 flex-1 dark:bg-slate-700"></div>
         </div>
 
         {/* OBJECT */}
-        <div className={`p-3 rounded border ${object ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200 border-dashed'}`}>
+        <div className={`p-3 rounded border ${object ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-slate-50 border-slate-200 border-dashed dark:bg-slate-900 dark:border-slate-700'}`}>
             <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-bold text-slate-500">OBJECT (Target)</span>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">OBJECT (Target)</span>
             {object && <button onClick={() => updateState('object', null)} className="text-xs text-red-500 hover:underline">Clear</button>}
             </div>
 
             {object ? (
             <>
-                <p className="text-sm line-clamp-3 italic mb-2">
+                <p className="text-sm line-clamp-3 italic mb-2 dark:text-slate-300">
                 "{object.type === 'existing' ? object.unit.text_content : object.text}"
                 </p>
                 {object.type === 'new' ? (
@@ -365,7 +365,7 @@ export const RelationshipManager = () => {
                     disabled={isObjectAuto}
                 />
                 ) : (
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
                     Author: <span className="font-semibold">{object.unit.author}</span>
                 </div>
                 )}
@@ -374,7 +374,7 @@ export const RelationshipManager = () => {
             <button 
                 onClick={() => updateState('object', captureSelection())}
                 disabled={!currentSelection && !selectedUnit}
-                className="w-full py-2 text-sm bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                className="w-full py-2 text-sm bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
             >
                 Set Current Selection
             </button>
@@ -386,7 +386,7 @@ export const RelationshipManager = () => {
             <button 
             onClick={() => updateState('clear', null)}
             disabled={!subject && !object}
-            className="px-4 py-3 bg-white text-slate-600 font-bold rounded shadow border border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+            className="px-4 py-3 bg-white text-slate-600 font-bold rounded shadow border border-slate-300 hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700"
             >
             Cancel
             </button>
@@ -394,7 +394,7 @@ export const RelationshipManager = () => {
             <button 
             onClick={handleSubmit}
             disabled={!subject || !object || isSubmitting}
-            className="flex-1 py-3 bg-slate-800 text-white font-bold rounded shadow-lg hover:bg-slate-700 disabled:bg-slate-300"
+            className="flex-1 py-3 bg-slate-800 text-white font-bold rounded shadow-lg hover:bg-slate-700 disabled:bg-slate-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:disabled:bg-slate-800"
             >
             {isSubmitting ? "Linking..." : "Create Connection"}
             </button>
@@ -409,12 +409,12 @@ export const RelationshipManager = () => {
         {/* Header (Unchanged) */}
         <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 group relative">
-                <h2 className="text-lg font-bold text-slate-800">
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
                     Relationship Manager
                 </h2>
                 <QuestionMarkCircleIcon className="w-5 h-5 text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
                 
-                <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed">
+                <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-3 bg-slate-800 text-white text-xs font-normal rounded-md shadow-xl z-20 leading-relaxed dark:bg-slate-700">
                     <p className="font-bold mb-1 border-b border-slate-600 pb-1">How to use this page:</p>
                     <p>Connect two pieces of text (Subject & Object) to define a relationship like "Commentary on" or "Translation of".</p>
                 </div>
@@ -422,14 +422,14 @@ export const RelationshipManager = () => {
         </div>
 
         {relationships.length > 0 ? (
-            <div className="bg-slate-50 rounded border border-slate-200 p-3 flex flex-col h-full overflow-hidden">
-                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide border-b border-slate-200 pb-1 flex-shrink-0">
+            <div className="bg-slate-50 rounded border border-slate-200 p-3 flex flex-col h-full overflow-hidden dark:bg-slate-900 dark:border-slate-700">
+                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide border-b border-slate-200 pb-1 flex-shrink-0 dark:text-slate-400 dark:border-slate-700">
                     This page contains: {relationships.length} link{relationships.length !== 1 ? 's' : ''}
                 </p>
                 
                 <div className="space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 flex-1 min-h-0">
                     {relationships.map((rel, idx) => (
-                        <div key={`${rel.subject_unit_id}-${rel.object_unit_id}-${idx}`} className="flex flex-col rounded border shadow-sm bg-white overflow-hidden">
+                        <div key={`${rel.subject_unit_id}-${rel.object_unit_id}-${idx}`} className="flex flex-col rounded border shadow-sm bg-white overflow-hidden dark:bg-slate-950 dark:border-slate-700">
 
                             {/* SUBJECT (Top) */}
                             <button 
@@ -440,15 +440,15 @@ export const RelationshipManager = () => {
                                     title: rel.subject_page_title,
                                     text_content: rel.subject_text
                                 })}
-                                className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 transition-colors border-b border-blue-100"
+                                className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 transition-colors border-b border-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:border-blue-900/40"
                             >
-                                <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 rounded uppercase mb-1 inline-block">Subject</span>
-                                <p className="text-xs text-slate-700 font-serif italic line-clamp-2">"{rel.subject_text}"</p>
+                                <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 rounded uppercase mb-1 inline-block dark:text-blue-300 dark:bg-blue-900/60">Subject</span>
+                                <p className="text-xs text-slate-700 font-serif italic line-clamp-2 dark:text-slate-300">"{rel.subject_text}"</p>
                             </button>
 
                             {/* CONNECTOR (Middle) */}
-                            <div className="flex justify-center items-center py-1 bg-slate-50 border-b border-slate-100">
-                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase">
+                            <div className="flex justify-center items-center py-1 bg-slate-50 border-b border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase dark:text-slate-500">
                                     <ArrowsUpDownIcon className="w-3 h-3" />
                                     <span>{rel.relationship_type}</span>
                                 </div>
@@ -463,17 +463,17 @@ export const RelationshipManager = () => {
                                     title: rel.object_page_title,
                                     text_content: rel.object_text
                                 })}
-                                className="w-full text-left p-2 bg-green-50 hover:bg-green-100 transition-colors"
+                                className="w-full text-left p-2 bg-green-50 hover:bg-green-100 transition-colors dark:bg-green-900/20 dark:hover:bg-green-900/40"
                             >
-                                <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 rounded uppercase mb-1 inline-block">Object</span>
-                                <p className="text-xs text-slate-700 font-serif italic line-clamp-2">"{rel.object_text}"</p>
+                                <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 rounded uppercase mb-1 inline-block dark:text-green-300 dark:bg-green-900/60">Object</span>
+                                <p className="text-xs text-slate-700 font-serif italic line-clamp-2 dark:text-slate-300">"{rel.object_text}"</p>
                             </button>
                         </div>
                     ))}
                 </div>
             </div>
         ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 dark:text-slate-500">
                 <LinkIcon className="h-12 w-12 mb-2 opacity-20" /> 
                 <p className="text-sm max-w-xs">
                     Select text on the page to begin linking it to another concept or explanation.
