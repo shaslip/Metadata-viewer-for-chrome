@@ -627,7 +627,7 @@ export const Tags = () => {
 
                 {/* Delete Highlight Button */}
                 {editingUnit && (
-                    <button onClick={handleDelete} className="text-red-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-slate-300 p-1 rounded hover:bg-red-50" title="Delete">
+                    <button onClick={handleDelete} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20" title="Delete">
                         <TrashIcon className="w-5 h-5" />
                     </button>
                 )}
@@ -649,15 +649,15 @@ export const Tags = () => {
                     {editingTag ? (
                         (editingTag as any).children && (editingTag as any).children.length > 0 ? (
                             <div className="text-center p-4">
-                                <p className="text-sm text-slate-600 mb-4">
+                                <p className="text-sm text-slate-600 mb-4 dark:text-slate-300">
                                     You cannot delete <strong>"{editingTag.label}"</strong> because it contains child categories.
                                 </p>
-                                <p className="text-xs text-slate-400 mb-4">
+                                <p className="text-xs text-slate-400 mb-4 dark:text-slate-500">
                                     Please delete or move the sub-categories first.
                                 </p>
                                 <button 
                                     onClick={() => setIsDeleteMode(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 text-sm font-semibold"
+                                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 text-sm font-semibold dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                                 >
                                     Go Back
                                 </button>
@@ -669,14 +669,14 @@ export const Tags = () => {
                                  ) : tagHasUnits === true ? (
                                      /* Case A1: Tag HAS snippets */
                                      <>
-                                         <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
+                                         <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
                                             <p className="font-bold mb-1">Warning</p>
                                             <p>This category contains highlights. If you delete it, these highlights will be moved to <strong>"Uncategorized"</strong>.</p>
                                          </div>
                                          
                                          <button 
                                             onClick={handleConfirmTagDelete} 
-                                            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold"
+                                            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold dark:border-red-500"
                                         >
                                             <TrashIcon className="w-4 h-4" />
                                             Delete "{editingTag.label}"
@@ -685,12 +685,12 @@ export const Tags = () => {
                                  ) : (
                                      /* Case A2: Tag EMPTY */
                                      <>
-                                         <p className="text-sm text-slate-700 mb-2">
+                                         <p className="text-sm text-slate-700 mb-2 dark:text-slate-300">
                                             Are you sure you want to delete <strong>"{editingTag.label}"</strong>?
                                          </p>
                                          <button 
                                             onClick={handleConfirmTagDelete}
-                                            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold"
+                                            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold dark:border-red-500"
                                          >
                                             <TrashIcon className="w-4 h-4" />
                                             Yes, Delete
@@ -701,7 +701,7 @@ export const Tags = () => {
                                  <div className="pt-2 text-center">
                                     <button 
                                         onClick={() => setIsDeleteMode(false)}
-                                        className="text-xs text-slate-400 hover:text-slate-600 underline"
+                                        className="text-xs text-slate-400 hover:text-slate-600 underline dark:text-slate-500 dark:hover:text-slate-400"
                                     >
                                         Cancel
                                     </button>
@@ -711,17 +711,17 @@ export const Tags = () => {
                     ) : (
                         /* CASE B: Deleting a HIGHLIGHT (Unit) */
                         <div className="space-y-4">
-                            <p className="text-sm text-slate-700 mb-2">
+                            <p className="text-sm text-slate-700 mb-2 dark:text-slate-300">
                                 Are you sure you want to delete this highlight?
                             </p>
                             
-                            <div className="p-2 bg-slate-50 border border-slate-200 rounded text-xs italic text-slate-500 line-clamp-3">
+                            <div className="p-2 bg-slate-50 border border-slate-200 rounded text-xs italic text-slate-500 line-clamp-3 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
                                 "{editingUnit?.text_content}"
                             </div>
 
                             <button 
                                 onClick={confirmHighlightDelete}
-                                className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold"
+                                className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 border border-red-600 text-white rounded hover:bg-red-600 transition-colors text-sm font-semibold dark:border-red-500"
                             >
                                 <TrashIcon className="w-4 h-4" />
                                 Yes, Delete Highlight
@@ -730,7 +730,7 @@ export const Tags = () => {
                             <div className="pt-2 text-center">
                                 <button 
                                     onClick={() => setIsDeleteMode(false)}
-                                    className="text-xs text-slate-400 hover:text-slate-600 underline"
+                                    className="text-xs text-slate-400 hover:text-slate-600 underline dark:text-slate-500 dark:hover:text-slate-400"
                                 >
                                     Cancel
                                 </button>
@@ -740,134 +740,145 @@ export const Tags = () => {
                  </div>
               ) : isRepairView ? (
                  <div className="space-y-4">
-                   <div className="text-xs text-slate-500">
-                       {editingUnit?.broken_index 
-                          ? "This highlight cannot be found. Select text to repair." 
-                          : "Select text on the page to update the highlighted range."}
-                   </div>
-                   {editingUnit && (
-                       <div className="opacity-75">
-                           <label className="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase dark:bg-slate-950 dark:text-slate-300">Original Text</label>
-                           <div className="text-xs text-slate-600 bg-slate-100 p-2 rounded border border-slate-200 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
-                               "{editingUnit.text_content}"
-                           </div>
-                       </div>
-                   )}
-                   <div>
-                       <label className="block text-xs font-bold text-slate-400 mb-1 uppercase dark:bg-slate-950 dark:text-slate-300">New Selection</label>
-                       {repairSelection ? (
-                           <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
-                               "{repairSelection.text}"
-                           </div>
-                       ) : (
-                           <div className="p-2 border border-dashed border-slate-300 rounded text-sm text-slate-400 text-center py-4">
-                               Waiting for you to select text on the page...
-                           </div>
-                       )}
-                   </div>
-                 </div>
-              ) : (
-                editingTag ? (
-                   <div className="space-y-4">
-                     <div>
-                       <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Tag Name</label>
-                       <input 
-                         type="text" 
-                         className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
-                         value={editingTag.label}
-                         onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
-                         autoFocus
-                       />
-                     </div>
-                     <div className="relative">
-                       <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Move to Parent (Optional)</label>
-                       {selectedParent ? (
-                         <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-                           <div className="flex items-center gap-2">
-                             <FolderIcon className="w-4 h-4 opacity-50"/>
-                             {selectedParent.label}
-                           </div>
-                           <button onClick={() => { setSelectedParent(null); setParentSearchQuery(''); }}>
-                             <XMarkIcon className="w-4 h-4"/>
-                           </button>
-                         </div>
-                       ) : (
-                         <>
-                           <input 
-                             ref={parentInputRef}
-                             type="text" 
-                             className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
-                             placeholder="Type to find a parent category..."
-                             value={parentSearchQuery}
-                             onChange={(e) => setParentSearchQuery(e.target.value)}
-                           />
-                           {parentSuggestions.length > 0 && createPortal(
-                             <ul 
-                                 className="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-2xl ring-1 ring-black/10 overflow-hidden"
-                                 style={{
-                                     left: parentDropdownPos.left,
-                                     bottom: parentDropdownPos.bottom,
-                                     width: parentDropdownPos.width,
-                                     maxHeight: '50vh',
-                                     overflowY: 'auto'
-                                 }}
-                             >
-                               <li className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                                 Suggested Parents
-                               </li>
-                               {parentSuggestions.map(s => (
-                                 <li 
-                                   key={s.id} 
-                                   className="px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2 text-slate-700 border-b border-slate-50 last:border-0"
-                                   onClick={() => {
-                                     setSelectedParent({ id: s.id, label: s.label });
-                                     setParentSuggestions([]);
-                                   }}
-                                 >
-                                   <FolderIcon className="w-4 h-4 text-blue-400 opacity-75"/>
-                                   <span className="truncate">{s.label}</span>
-                                 </li>
-                               ))}
-                             </ul>,
-                             document.body
-                           )}
-                         </>
-                       )}
-                     </div>
-                   </div>
-                ) : (
-                  <>
-                     {!editingUnit && (
-                      <div className="mb-4">
-                        {isAutoDetected ? (
-                          <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                            Author: {author}
-                          </div>
-                        ) : (
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Author</label>
-                            {showManualAuthorInput ? (
-                              <div className="relative">
-                                <input type="text" className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" value={author === 'Undefined' ? '' : author} onChange={(e) => setAuthor(e.target.value)} placeholder="Enter Author Name..." autoFocus />
-                                <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-                                <button onClick={() => { setShowManualAuthorInput(false); setAuthor('Undefined'); }} className="absolute right-2 top-2 text-xs text-blue-600 hover:underline">Cancel</button>
-                              </div>
-                            ) : (
-                              <div className="relative">
-                                <select className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white" value={author} onChange={(e) => { if (e.target.value === 'OTHER_MANUAL') { setShowManualAuthorInput(true); setAuthor(''); } else { setAuthor(e.target.value); } }}>
-                                  <option value="Undefined" disabled>Select an Author...</option>
-                                  {CANONICAL_AUTHORS.map(name => <option key={name} value={name}>{name}</option>)}
-                                  <option value="OTHER_MANUAL">Other...</option>
-                                </select>
-                                <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-                                <ChevronDownIcon className="absolute right-2.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
-                              </div>
-                            )}
-                          </div>
-                        )}
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {editingUnit?.broken_index 
+                        ? "This highlight cannot be found. Select text to repair." 
+                        : "Select text on the page to update the highlighted range."}
+                    </div>
+                    {editingUnit && (
+                      <div className="opacity-75">
+                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase">Original Text</label>
+                        <div className="text-xs text-slate-600 bg-slate-100 p-2 rounded border border-slate-200 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
+                          "{editingUnit.text_content}"
+                        </div>
                       </div>
                     )}
-                    <TagInput tags={selectedTags} onChange={setSelectedTags} />
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">New Selection</label>
+                      {repairSelection ? (
+                        <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+                          "{repairSelection.text}"
+                        </div>
+                      ) : (
+                        <div className="p-2 border border-dashed border-slate-300 rounded text-sm text-slate-400 text-center py-4 dark:border-slate-700 dark:text-slate-500">
+                          Waiting for you to select text on the page...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+              ) : (
+                editingTag ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Tag Name</label>
+                        <input 
+                          type="text" 
+                          className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
+                          value={editingTag.label}
+                          onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="relative">
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Move to Parent (Optional)</label>
+                        {selectedParent ? (
+                          <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400">
+                            <div className="flex items-center gap-2">
+                              <FolderIcon className="w-4 h-4 opacity-50"/>
+                              {selectedParent.label}
+                            </div>
+                            <button onClick={() => { setSelectedParent(null); setParentSearchQuery(''); }}>
+                              <XMarkIcon className="w-4 h-4"/>
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <input 
+                              ref={parentInputRef}
+                              type="text" 
+                              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
+                              placeholder="Type to find a parent category..."
+                              value={parentSearchQuery}
+                              onChange={(e) => setParentSearchQuery(e.target.value)}
+                            />
+                            {parentSuggestions.length > 0 && createPortal(
+                              <ul 
+                                className="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-2xl ring-1 ring-black/10 overflow-hidden dark:bg-slate-800 dark:border-slate-700"
+                                style={{
+                                  left: parentDropdownPos.left,
+                                  bottom: parentDropdownPos.bottom,
+                                  width: parentDropdownPos.width,
+                                  maxHeight: '50vh',
+                                  overflowY: 'auto'
+                                }}
+                              >
+                                <li className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500">
+                                  Suggested Parents
+                                </li>
+                                {parentSuggestions.map(s => (
+                                  <li 
+                                    key={s.id} 
+                                    className="px-3 py-2.5 text-sm hover:bg-blue-50 cursor-pointer flex items-center gap-2 text-slate-700 border-b border-slate-50 last:border-0 dark:text-slate-300 dark:hover:bg-slate-700 dark:border-slate-700"
+                                    onClick={() => {
+                                      setSelectedParent({ id: s.id, label: s.label });
+                                      setParentSuggestions([]);
+                                    }}
+                                  >
+                                    <FolderIcon className="w-4 h-4 text-blue-400 opacity-75"/>
+                                    <span className="truncate">{s.label}</span>
+                                  </li>
+                                ))}
+                              </ul>,
+                              document.body
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {!editingUnit && (
+                        <div className="mb-4">
+                          {isAutoDetected ? (
+                            <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wide dark:text-slate-400">
+                              Author: {author}
+                            </div>
+                          ) : (
+                            <div>
+                              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase dark:text-slate-400">Author</label>
+                              {showManualAuthorInput ? (
+                                <div className="relative">
+                                  <input 
+                                    type="text" 
+                                    className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200" 
+                                    value={author === 'Undefined' ? '' : author} 
+                                    onChange={(e) => setAuthor(e.target.value)} 
+                                    placeholder="Enter Author Name..." 
+                                    autoFocus 
+                                  />
+                                  <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                                  <button onClick={() => { setShowManualAuthorInput(false); setAuthor('Undefined'); }} className="absolute right-2 top-2 text-xs text-blue-600 hover:underline dark:text-blue-400">Cancel</button>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <select 
+                                    className="w-full p-2 pl-8 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200" 
+                                    value={author} 
+                                    onChange={(e) => { if (e.target.value === 'OTHER_MANUAL') { setShowManualAuthorInput(true); setAuthor(''); } else { setAuthor(e.target.value); } }}
+                                  >
+                                    <option value="Undefined" disabled>Select an Author...</option>
+                                    {CANONICAL_AUTHORS.map(name => <option key={name} value={name}>{name}</option>)}
+                                    <option value="OTHER_MANUAL">Other...</option>
+                                  </select>
+                                  <UserIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                                  <ChevronDownIcon className="absolute right-2.5 top-3 w-4 h-4 text-slate-400 pointer-events-none dark:text-slate-500" />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <TagInput tags={selectedTags} onChange={setSelectedTags} />
                   </>
                 )
               )}
