@@ -37,16 +37,16 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen p-6 bg-slate-50 text-center">
+    <div className="flex flex-col items-center justify-center h-screen p-6 bg-slate-50 text-center dark:bg-slate-950">
       <div className="mb-6">
         <div className="w-16 h-16 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-2xl font-bold">
           B
         </div>
-        <h2 className="mt-4 text-xl font-bold text-slate-800">Text Annotation Tool</h2>
+        <h2 className="mt-4 text-xl font-bold text-slate-800 dark:text-slate-100">Text Annotation Tool</h2>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded border border-red-200 w-full">
+        <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded border border-red-200 w-full dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
           {error}
         </div>
       )}
@@ -55,7 +55,7 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
         <input 
           type="text" 
           placeholder="Username (e.g. Sarah@Annotation)"
-          className="w-full p-2 text-sm border rounded"
+          className="w-full p-2 text-sm border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200"
           value={username}
           onChange={e => setUsername(e.target.value)}
           required
@@ -63,7 +63,7 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
         <input 
           type="password" 
           placeholder="Bot Password"
-          className="w-full p-2 text-sm border rounded"
+          className="w-full p-2 text-sm border rounded dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200"
           value={password}
           onChange={e => setPassword(e.target.value)}
           required
@@ -78,7 +78,7 @@ export const AuthGate: React.FC<Props> = ({ onLogin }) => {
         </button>
       </form>
 
-      <div className="mt-6 text-xs text-slate-400 text-left">
+      <div className="mt-6 text-xs text-slate-400 text-left dark:text-slate-500">
         <p className="mb-1 font-semibold">How to get a Bot Password:</p>
         <ol className="list-decimal pl-4 space-y-1">
           <li>Go to <b>Special:BotPasswords</b> on Bahai.works</li>
