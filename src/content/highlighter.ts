@@ -411,9 +411,24 @@ const renderBrokenLinksFooter = (brokenUnits: LogicalUnit[]) => {
     document.body.style.paddingBottom = '70px'; 
 };
 
+// --- Helpers for Regex Search ---
+const escapeRegExp = (string: string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const createFlexiblePattern = (text: string) => {
+    // 1. Normalize quotes to straight quotes and collapse spaces in the ANCHOR only
+    const clean = text.replace(/[\u2018\u2019]/g, "'")
+                      .replace(/[\u201C\u201D]/g, '"')
+                      .replace(/\s+/g, ' ')
+                      .trim();
+    // 2. Escape for regex, then replace single spaces with \s+ to match newlines/tabs
+    return escapeRegExp(clean).replace(/ /g, '\\s+');
+};
+
 const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: number) => {
     // [CHANGED] Normalize inputs for search context
-    const originalText = normalize(unit.text_content); 
+    const originalText = normalize(unit.text_content);
     const originalStart = unit.start_char_index;
 
     // Safety: Don't use anchors larger than half the text
@@ -424,32 +439,37 @@ const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: nu
     const headAnchor = originalText.substring(0, anchorSize);
     const tailAnchor = originalText.substring(originalText.length - anchorSize);
 
-    // [CHANGED] Create a normalized version of the page text for searching
-    // Since replacing smart quotes with ASCII quotes doesn't change string length, indices remain valid.
-    const searchablePageText = normalize(pageText);
+    // [FIX] Create a version of pageText with standardized quotes but PRESERVED length/indices
+    // We strictly replace 1 char with 1 char. We DO NOT collapse whitespace here.
+    const matchablePageText = pageText.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
 
     // Define Neighborhood
     const searchStart = Math.max(0, originalStart - SEARCH_RADIUS);
-    const searchEnd = Math.min(searchablePageText.length, originalStart + originalText.length + SEARCH_RADIUS);
-    const neighborhood = searchablePageText.substring(searchStart, searchEnd);
+    const searchEnd = Math.min(matchablePageText.length, originalStart + originalText.length + SEARCH_RADIUS);
+    const neighborhood = matchablePageText.substring(searchStart, searchEnd);
 
-    // Helper: Find all occurrences of a string in a text block
-    const findAllIndices = (haystack: string, needle: string, offset: number) => {
-        const indices = [];
-        let idx = haystack.indexOf(needle);
-        while (idx !== -1) {
-            indices.push(offset + idx);
-            idx = haystack.indexOf(needle, idx + 1);
-        }
-        return indices;
-    };
+    // Regex Setup
+    const headPattern = createFlexiblePattern(headAnchor);
+    const tailPattern = createFlexiblePattern(tailAnchor);
+    const headRegex = new RegExp(headPattern, 'g');
+    const tailRegex = new RegExp(tailPattern, 'g');
 
-    // 1. Find all Head Candidates (Neighborhood first, then Global)
-    let headCandidates = findAllIndices(neighborhood, headAnchor, searchStart);
+    // 1. Find all Head Candidates (Neighborhood first)
+    const headCandidates: number[] = [];
+    let match;
+
+    while ((match = headRegex.exec(neighborhood)) !== null) {
+        headCandidates.push(searchStart + match.index);
+    }
+
     if (headCandidates.length === 0) {
         // Fallback: Global Search
-        headCandidates = findAllIndices(searchablePageText, headAnchor, 0);
+        headRegex.lastIndex = 0;
+        while ((match = headRegex.exec(matchablePageText)) !== null) {
+            headCandidates.push(match.index);
+        }
     }
+
     if (headCandidates.length === 0) return null;
 
     // 2. Find Best Match
@@ -458,18 +478,21 @@ const performAnchorSearch = (unit: LogicalUnit, pageText: string, anchorSize: nu
 
     for (const startPos of headCandidates) {
         const expectedEnd = startPos + originalText.length;
-        const windowEnd = Math.min(searchablePageText.length, expectedEnd + SEARCH_RADIUS); 
-        const searchWindow = searchablePageText.substring(startPos, windowEnd);
+        const windowStart = startPos + anchorSize; 
+        const windowEnd = Math.min(matchablePageText.length, expectedEnd + SEARCH_RADIUS);
 
-        const tailRelIndex = searchWindow.indexOf(tailAnchor, anchorSize); 
+        // Search for tail in the window
+        tailRegex.lastIndex = windowStart;
+        const tailMatch = tailRegex.exec(matchablePageText);
 
-        if (tailRelIndex !== -1) {
-            const endPos = startPos + tailRelIndex + anchorSize;
-            
-            // IMPORTANT: Extract the *actual* text from the *original* pageText to preserve original formatting/quotes
+        if (tailMatch && tailMatch.index < windowEnd) {
+            // [FIX] Use the actual length of the regex match, not the fixed anchorSize
+            const endPos = tailMatch.index + tailMatch[0].length;
+
+            // IMPORTANT: Extract from the ORIGINAL pageText to preserve formatting
             const newText = pageText.substring(startPos, endPos);
-            
-            // Compare lengths using normalized versions to avoid false mismatches
+
+            // Compare lengths using normalized versions
             const lenDiff = Math.abs(normalize(newText).length - originalText.length);
             const allowedDiff = Math.max(50, originalText.length * 0.5);
 
