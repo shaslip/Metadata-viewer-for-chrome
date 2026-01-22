@@ -26,6 +26,7 @@ export const Tags = () => {
   const { post, put, del, get } = useApi();
   
   const [viewMode, setViewMode] = useState<'tree' | 'flat'>('tree');
+  const tagNameInputRef = useRef<HTMLInputElement>(null);
   // Header State
   const [filterText, setFilterText] = useState('');
   
@@ -772,11 +773,12 @@ export const Tags = () => {
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Tag Name</label>
                     <input 
+                      ref={tagNameInputRef} // [ADDED] Attach ref here
                       type="text" 
                       className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
                       value={editingTag.label}
                       onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
-                      onKeyDown={(e) => e.key === 'Enter' && handleModifyTag()}
+                      onKeyDown={(e) => e.key === 'Enter' && handleModifyTag()} 
                       autoFocus
                     />
                   </div>
@@ -824,6 +826,7 @@ export const Tags = () => {
                                 onClick={() => {
                                   setSelectedParent({ id: s.id, label: s.label });
                                   setParentSuggestions([]);
+                                  tagNameInputRef.current?.focus();
                                 }}
                               >
                                 <FolderIcon className="w-4 h-4 text-blue-400 opacity-75"/>
