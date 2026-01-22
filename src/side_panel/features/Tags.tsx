@@ -776,6 +776,7 @@ export const Tags = () => {
                       className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200"
                       value={editingTag.label}
                       onChange={(e) => setEditingTag({ ...editingTag, label: e.target.value })}
+                      onKeyDown={(e) => e.key === 'Enter' && handleModifyTag()}
                       autoFocus
                     />
                   </div>
@@ -800,6 +801,7 @@ export const Tags = () => {
                           placeholder="Type to find a parent category..."
                           value={parentSearchQuery}
                           onChange={(e) => setParentSearchQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleModifyTag()}
                         />
                         {parentSuggestions.length > 0 && createPortal(
                           <ul 
