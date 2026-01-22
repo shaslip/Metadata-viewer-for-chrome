@@ -200,39 +200,50 @@ export const TaxonomyExplorer: React.FC<Props> = ({
         <div className="pb-10 px-2"> 
            {isEditMode && <RootDropZone />}
 
-           {displayTree.length === 0 ? (
-               <div className="flex flex-col items-center justify-center p-6 text-center">
-                   {filter.trim().length > 0 && (
-                       <button 
-                           onClick={() => onCreateTag(filter)}
-                           className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-400 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 dark:hover:bg-blue-900/40"
-                       >
-                           <PlusIcon className="w-4 h-4" />
-                           Create "{filter}"
-                       </button>
-                   )}
-               </div>
-           ) : (
-               displayTree.map(node => (
-                   <TaxonomyNode 
-                     key={node.id} 
-                     node={node} 
-                     isEditMode={isEditMode}
-                     onEditTag={onEditTag}
-                     highlightUnitId={revealUnitId}
-                     refreshKey={refreshKey}
-                     onTagSelect={onTagSelect}
-                     isSelectionMode={isSelectionMode}
-                     isExpanded={node.forceExpand || false}
-                     onToggleExpand={handleToggleExpand}
-                     onActivate={handleActivate}
-                     activeFocusId={activeFocusId}
-                     onUnitClick={onUnitClick}
-                   />
-               ))
-           )}
+           {/* [CHANGED] Always render tree items if they exist */}
+           {displayTree.map(node => (
+                <TaxonomyNode 
+                  key={node.id} 
+                  node={node} 
+                  isEditMode={isEditMode}
+                  onEditTag={onEditTag}
+                  highlightUnitId={revealUnitId}
+                  refreshKey={refreshKey}
+                  onTagSelect={onTagSelect}
+                  isSelectionMode={isSelectionMode}
+                  isExpanded={node.forceExpand || false}
+                  onToggleExpand={handleToggleExpand}
+                  onActivate={handleActivate}
+                  activeFocusId={activeFocusId}
+                  onUnitClick={onUnitClick}
+                />
+            ))}
+
+            {/* [CHANGED] Always render Create Button at the bottom if filter is active */}
+            {filter.trim().length > 0 && (
+                <button 
+                    onClick={() => onCreateTag(filter)}
+                    className={`
+                        w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-md text-sm transition-all
+                        ${displayTree.length === 0 
+                            ? 'bg-blue-50 text-blue-600 border border-blue-200 justify-center py-8 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400' // Prominent if empty
+                            : 'hover:bg-blue-50 text-slate-400 hover:text-blue-600 border border-transparent hover:border-blue-100 dark:hover:bg-slate-800 dark:hover:text-blue-400' // Subtle list item if tree exists
+                        }
+                    `}
+                >
+                    <PlusIcon className="w-4 h-4" />
+                    <span className="font-semibold">Create "{filter}"</span>
+                </button>
+            )}
+
+            {/* [CHANGED] Empty state only if no filter and no tree */}
+            {displayTree.length === 0 && filter.trim().length === 0 && (
+                <div className="p-8 text-center text-slate-400 text-xs italic">
+                    No tags found.
+                </div>
+            )}
         </div>
-        
+
         <DragOverlay>
             {activeDragId ? (
                 <div className="bg-white border border-blue-400 p-2 rounded shadow-lg opacity-90 text-sm font-bold text-blue-800">
