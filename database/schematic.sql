@@ -1,3 +1,4 @@
+-- Database is called 'metadata' and lives on the same server as Bahaipedia
 CREATE TABLE IF NOT EXISTS articles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     source_code VARCHAR(10) NOT NULL,   -- 'bw', 'bp', etc.
